@@ -33,7 +33,7 @@ const char *COLOR_NAMES[] =
     ""
 };
 
-const char *LOG_FILE_NAME = "log.html";
+const char *LOG_FILE_NAME = "../LOGS/log.html";
 FILE       *LOG_STREAM    = nullptr;
 
 /**
