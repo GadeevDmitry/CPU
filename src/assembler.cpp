@@ -18,6 +18,8 @@ struct source
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
+void write_file(void *data, const int data_size);
+
 char *read_file(const char *file_name, size_t *const size_ptr);
 
 unsigned get_file_size(const char *file_name);
@@ -36,6 +38,26 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
+    write_file(program.source_code, program.source_size);
+}
+
+/**
+*   @brief Writes machine code from "data" into the "machine.cpu".
+*
+*   @param data      [in] - pointer to the first element of "machine code" array.
+*   @param data_size [in] - size (in bytes) of "data"
+*
+*   @return nothing 
+*/
+
+void write_file(void *data, const int data_size)
+{
+    FILE  *stream = fopen("machine.cpu", "wb");
+    assert(stream != nullptr);
+    assert(data   != nullptr);
+
+    fwrite(data, sizeof(char), data_size, stream);
+    fclose(stream);
 }
 
 /**
