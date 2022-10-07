@@ -33,6 +33,15 @@ struct machine
     int   machine_pos;
 };
 
+struct header
+{
+    char fst_let;
+    char sec_let;
+    char version;
+
+    size_t cmd_num;
+};
+
 enum CMD
 {
     CMD_HLT          ,
@@ -47,15 +56,16 @@ enum CMD
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
-CMD      identify_cmd  (const char *cmd);
-
 bool     read_double   (source *const program, src_location *const info, double *const arg);
+
+CMD      identify_cmd  (const char *cmd);
 
 char    *read_file     (const char *file_name, size_t *const size_ptr);
 
 void     write_file    (void *data, const int data_size);
 void     read_cmd      (source *program, src_location *info);
 void     skip_spaces   (source *const program, src_location *const info);
+void    *assembler     (source *program, size_t *const cpu_size);
 
 unsigned get_file_size (const char *file_name);
 
@@ -70,9 +80,16 @@ int main(int argc, const char *argv[])
 
     if (program.src_code == nullptr)
     {
-        fprintf(stderr, "Can't open the file \"%s\"\n", argv[1]);
+        fprintf(stderr, RED "ERROR: " CANCEL "Can't open the file \"%s\"\n", argv[1]);
         return 1;
     }
+
+    header machine_info = {'G', 'D', 1, 0};
+    void  *machine_data = assembler(&program, &machine_info.cmd_num);
+
+    *(header *) machine_data = machine_info;
+
+    write_file(machine_data, machine_info.cmd_num + sizeof(header));
 }
 
 /**
@@ -91,7 +108,7 @@ void *assembler(source *program, size_t *const cpu_size)
     src_location info = {0, 1, (char *) calloc(sizeof(char), program->src_size + 1)};
     assert(info.cur_src_cmd != nullptr);
 
-    machine cpu = {calloc(sizeof(double), program->src_size), 0};
+    machine cpu = {calloc(sizeof(double), program->src_size), sizeof(header)};
     assert( cpu.machine_code != nullptr);
 
     bool error = false;
@@ -132,7 +149,7 @@ void *assembler(source *program, size_t *const cpu_size)
 
     if (error) return nullptr;
 
-    *cpu_size = cpu.machine_pos;
+    *cpu_size = cpu.machine_pos - sizeof(header); //only machine commands (without header)
     return cpu.machine_code;
 }
 
