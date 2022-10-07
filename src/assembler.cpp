@@ -68,6 +68,32 @@ void *assembler(source *program)
 }
 
 /**
+*   @brief Skips space_characters. Stops when non-space_character founded. Char "c" is the space_character if isspace("c") is true.
+*   @brief Changes "info->cur_src_pos"  if space_characters  are founded.
+*   @brief Changes "info->cur_src_line" if backslash_n chars are founded.
+*
+*   @param program [in] - pointer to the structure with information about source
+*   @param info    [in] - pointer to the structure with information about location in source
+*
+*   @return nothing
+*/
+
+void skip_spaces(source *const program, src_location *const info)
+{
+    assert(program != nullptr);
+    assert(info    != nullptr);
+
+    int cur_char = 0;
+
+    while (info->cur_src_pos < program->src_size && !isspace(cur_char = program->src_code[info->cur_src_pos]))
+    {
+        if (cur_char == '\n') ++info->cur_src_line;
+
+        ++info->cur_src_pos;
+    }
+}
+
+/**
 *   @brief Writes machine code from "data" into the "machine.cpu".
 *
 *   @param data      [in] - pointer to the first element of array with machine code.
