@@ -1,0 +1,7 @@
+push 10
+push 20
+add
+push 15
+div
+out
+hlt

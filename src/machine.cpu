@@ -1,0 +1,4 @@
+push        14
+push 300
+add
+out         hlt

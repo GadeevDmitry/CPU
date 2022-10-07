@@ -32,11 +32,25 @@ struct machine
     int   machine_pos;
 };
 
+enum CMD
+{
+    CMD_HLT,
+    CMD_PUSH,
+    CMD_ADD,
+    CMD_SUB,
+    CMD_DIV,
+    CMD_OUT,
+    CMD_NOT_EXICTING,
+    CMD_NOT_DEFINED
+};
+
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
-void write_file(void *data, const int data_size);
+char    *read_file    (const char *file_name, size_t *const size_ptr);
 
-char *read_file(const char *file_name, size_t *const size_ptr);
+void     write_file   (void *data, const int data_size);
+void     read_cmd     (source *program, src_location *info);
+void     skip_spaces  (source *const program, src_location *const info);
 
 unsigned get_file_size(const char *file_name);
 
@@ -60,11 +74,43 @@ void *assembler(source *program)
 {
     assert(program != nullptr);
 
-    src_location info = {0, 1, (char *) calloc(sizeof(char), program->src_size)};
+    src_location info = {0, 1, (char *) calloc(sizeof(char), program->src_size + 1)};
     assert(info.cur_src_cmd != nullptr);
 
     machine cpu = {calloc(sizeof(elem_t), program->src_size), 0};
     assert( cpu.machine_code != nullptr);
+
+    while (info.cur_src_pos < program->src_size)
+    {
+        skip_spaces(program, &info);
+        read_cmd   (program, &info);
+    }
+}
+
+/**
+*   @brief Reads another command from source and put it in the array info->cur_src_cmd.
+*
+*   @param program [in]  - pointer to the structure with information about source
+*   @param info    [out] - pointer to the structure with information abour location in source
+*
+*   @return nothing
+*/
+
+void read_cmd(source *program, src_location *info)
+{
+    assert(program != nullptr);
+    assert(info    != nullptr);
+
+    int cur_char = 0;
+    int cmd_counter = 0;
+
+    while (info->cur_src_pos < program->src_size && !isspace(cur_char = program->src_code[info->cur_src_pos]))
+    {
+        info->cur_src_cmd[cmd_counter++] = cur_char;
+        info->cur_src_pos++;
+    }
+    
+    info->cur_src_cmd[cmd_counter] = '\0';
 }
 
 /**
@@ -72,8 +118,8 @@ void *assembler(source *program)
 *   @brief Changes "info->cur_src_pos"  if space_characters  are founded.
 *   @brief Changes "info->cur_src_line" if backslash_n chars are founded.
 *
-*   @param program [in] - pointer to the structure with information about source
-*   @param info    [in] - pointer to the structure with information about location in source
+*   @param program [in]  - pointer to the structure with information about source
+*   @param info    [out] - pointer to the structure with information about location in source
 *
 *   @return nothing
 */
@@ -85,7 +131,7 @@ void skip_spaces(source *const program, src_location *const info)
 
     int cur_char = 0;
 
-    while (info->cur_src_pos < program->src_size && !isspace(cur_char = program->src_code[info->cur_src_pos]))
+    while (info->cur_src_pos < program->src_size && isspace(cur_char = program->src_code[info->cur_src_pos]))
     {
         if (cur_char == '\n') ++info->cur_src_line;
 
