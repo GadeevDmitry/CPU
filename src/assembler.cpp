@@ -10,10 +10,26 @@
 
 #include "logs.h"
 
+typedef int elem_t;
+
 struct source
 {
-    char  *source_code;
-    size_t source_size;
+    char  *src_code;
+    size_t src_size;
+};
+
+struct src_location
+{
+    int cur_src_pos;
+    int cur_src_line;
+
+    char *cur_src_cmd;
+};
+
+struct machine
+{
+    void *machine_code;
+    int   machine_pos;
 };
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
@@ -26,25 +42,35 @@ unsigned get_file_size(const char *file_name);
 
 /*------------------------------------------------------------------------------------------------------*/
 
+
 int main(int argc, const char *argv[])
 {
     source program = {};
 
-    program.source_code = read_file(argv[1], &program.source_size);
+    program.src_code = read_file(argv[1], &program.src_size);
 
-    if (program.source_code == nullptr)
+    if (program.src_code == nullptr)
     {
         fprintf(stderr, "Can't open the file \"%s\"\n", argv[1]);
         return 1;
     }
+}
 
-    write_file(program.source_code, program.source_size);
+void *assembler(source *program)
+{
+    assert(program != nullptr);
+
+    src_location info = {0, 1, (char *) calloc(sizeof(char), program->src_size)};
+    assert(info.cur_src_cmd != nullptr);
+
+    machine cpu = {calloc(sizeof(elem_t), program->src_size), 0};
+    assert( cpu.machine_code != nullptr);
 }
 
 /**
 *   @brief Writes machine code from "data" into the "machine.cpu".
 *
-*   @param data      [in] - pointer to the first element of "machine code" array.
+*   @param data      [in] - pointer to the first element of array with machine code.
 *   @param data_size [in] - size (in bytes) of "data"
 *
 *   @return nothing 
