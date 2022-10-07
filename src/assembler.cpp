@@ -10,7 +10,8 @@
 
 #include "logs.h"
 
-typedef int elem_t;
+#define RED    "\e[1;31m"
+#define CANCEL "\e[0m"
 
 struct source
 {
@@ -41,21 +42,22 @@ enum CMD
     CMD_MUL          ,
     CMD_DIV          ,
     CMD_OUT          ,
-    CMD_NOT_EXICTING ,
-    CMD_NOT_DEFINED
+    CMD_NOT_EXICTING
 };
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
-CMD      identify_cmd (const char *cmd);
+CMD      identify_cmd  (const char *cmd);
 
-char    *read_file    (const char *file_name, size_t *const size_ptr);
+bool     read_double   (source *const program, src_location *const info, double *const arg);
 
-void     write_file   (void *data, const int data_size);
-void     read_cmd     (source *program, src_location *info);
-void     skip_spaces  (source *const program, src_location *const info);
+char    *read_file     (const char *file_name, size_t *const size_ptr);
 
-unsigned get_file_size(const char *file_name);
+void     write_file    (void *data, const int data_size);
+void     read_cmd      (source *program, src_location *info);
+void     skip_spaces   (source *const program, src_location *const info);
+
+unsigned get_file_size (const char *file_name);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -73,15 +75,26 @@ int main(int argc, const char *argv[])
     }
 }
 
-void *assembler(source *program)
+/**
+*   @brief Translates "source code" to "machine code".
+*
+*   @param program  [in]  - pointer to the structure with information about source
+*   @param cpu_size [out] - pointer to the variable to put the size of "machine code" (in bytes) in
+*
+*   @return array consisting of "machine code" 
+*/
+
+void *assembler(source *program, size_t *const cpu_size)
 {
     assert(program != nullptr);
 
     src_location info = {0, 1, (char *) calloc(sizeof(char), program->src_size + 1)};
     assert(info.cur_src_cmd != nullptr);
 
-    machine cpu = {calloc(sizeof(elem_t), program->src_size), 0};
+    machine cpu = {calloc(sizeof(double), program->src_size), 0};
     assert( cpu.machine_code != nullptr);
+
+    bool error = false;
 
     while (info.cur_src_pos < program->src_size)
     {
@@ -89,11 +102,42 @@ void *assembler(source *program)
         read_cmd   (program, &info);
 
         CMD status_cmd = identify_cmd(info.cur_src_cmd);
+
+        if (status_cmd == CMD_NOT_EXICTING)
+        {
+            error = true;
+            fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "command \"%s\" is not existing\n", info.cur_src_line, info.cur_src_cmd);
+        }
+        else
+        {
+            *((char *) cpu.machine_code + cpu.machine_pos) = status_cmd;
+            cpu.machine_pos += sizeof(char);
+
+            if (status_cmd == CMD_PUSH)
+            {
+                double arg = 0;
+                if (read_double(program, &info, &arg))
+                {
+                    *(double *) ((char *) cpu.machine_code + cpu.machine_pos) = arg;
+                    cpu.machine_pos += sizeof(double);
+                }
+                else
+                {
+                    error = true;
+                    fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "\"%s\" is not valid double\n", info.cur_src_line, info.cur_src_cmd);
+                }
+            }
+        }
     }
+
+    if (error) return nullptr;
+
+    *cpu_size = cpu.machine_pos;
+    return cpu.machine_code;
 }
 
 /**
-*   @brief Reads another command from source and put it in the array info->cur_src_cmd.
+*   @brief Reads another command from source and puts it in the array "info->cur_src_cmd".
 *
 *   @param program [in]  - pointer to the structure with information about source
 *   @param info    [out] - pointer to the structure with information abour location in source
@@ -109,7 +153,8 @@ void read_cmd(source *program, src_location *info)
     int cur_char = 0;
     int cmd_counter = 0;
 
-    while (info->cur_src_pos < program->src_size && !isspace(cur_char = program->src_code[info->cur_src_pos]))
+    while (info->cur_src_pos < program->src_size &&
+           !isspace(cur_char = program->src_code[info->cur_src_pos]))
     {
         info->cur_src_cmd[cmd_counter++] = cur_char;
         info->cur_src_pos++;
@@ -144,6 +189,32 @@ CMD identify_cmd(const char *cmd)
 }
 
 /**
+*   @brief Reads another argument from source. Checks if the argument is valid double. Puts the argument in "*arg".
+*
+*   @param program [in]  - pointer to the structure with information about source
+*   @param info    [out] - pointer to the structure with information about location in source
+*   @param arg     [out] - pointer to the double variable to put in
+*
+*   @return true if argument is valid and false else
+*
+*   @note you should ignore the value of "*arg" if argument is invalid
+*/
+
+bool read_double(source *const program, src_location *const info, double *const arg)
+{
+    assert(program != nullptr);
+    assert(info    != nullptr);
+
+    skip_spaces(program, info);
+    read_cmd(program, info);
+
+    char *check = nullptr;
+    *arg = strtod(info->cur_src_cmd, &check);
+
+    return !(*check);
+}
+
+/**
 *   @brief Skips space_characters. Stops when non-space_character founded. Char "c" is the space_character if isspace("c") is true.
 *   @brief Changes "info->cur_src_pos"  if space_characters  are founded.
 *   @brief Changes "info->cur_src_line" if backslash_n chars are founded.
@@ -161,7 +232,8 @@ void skip_spaces(source *const program, src_location *const info)
 
     int cur_char = 0;
 
-    while (info->cur_src_pos < program->src_size && isspace(cur_char = program->src_code[info->cur_src_pos]))
+    while (info->cur_src_pos < program->src_size &&
+           isspace(cur_char = program->src_code[info->cur_src_pos]))
     {
         if (cur_char == '\n') ++info->cur_src_line;
 
