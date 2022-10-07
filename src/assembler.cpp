@@ -34,17 +34,20 @@ struct machine
 
 enum CMD
 {
-    CMD_HLT,
-    CMD_PUSH,
-    CMD_ADD,
-    CMD_SUB,
-    CMD_DIV,
-    CMD_OUT,
-    CMD_NOT_EXICTING,
+    CMD_HLT          ,
+    CMD_PUSH         ,
+    CMD_ADD          ,
+    CMD_SUB          ,
+    CMD_MUL          ,
+    CMD_DIV          ,
+    CMD_OUT          ,
+    CMD_NOT_EXICTING ,
     CMD_NOT_DEFINED
 };
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
+
+CMD      identify_cmd (const char *cmd);
 
 char    *read_file    (const char *file_name, size_t *const size_ptr);
 
@@ -84,6 +87,8 @@ void *assembler(source *program)
     {
         skip_spaces(program, &info);
         read_cmd   (program, &info);
+
+        CMD status_cmd = identify_cmd(info.cur_src_cmd);
     }
 }
 
@@ -111,6 +116,31 @@ void read_cmd(source *program, src_location *info)
     }
     
     info->cur_src_cmd[cmd_counter] = '\0';
+}
+
+/**
+*   @brief Identifies the command "cmd". Returns corresponding value from enum "CMD".
+*
+*   @param cmd [in] - pointer to the first byte of null-terminated byte string coding the command
+*
+*   @return the value from enum "CMD" that corresponds to "cmd"
+*
+*   @note return "CMD_NOT_EXICTING" if command "cmd" is invalid
+*/
+
+CMD identify_cmd(const char *cmd)
+{
+    assert(cmd != nullptr);
+
+    if (strcasecmp(cmd, "HLT" ) == 0) return CMD_HLT ;
+    if (strcasecmp(cmd, "PUSH") == 0) return CMD_PUSH;
+    if (strcasecmp(cmd, "ADD" ) == 0) return CMD_ADD ;
+    if (strcasecmp(cmd, "SUB" ) == 0) return CMD_SUB ;
+    if (strcasecmp(cmd, "MUL" ) == 0) return CMD_MUL ;
+    if (strcasecmp(cmd, "DIV" ) == 0) return CMD_DIV ;
+    if (strcasecmp(cmd, "OUT" ) == 0) return CMD_OUT ;
+
+    return CMD_NOT_EXICTING;
 }
 
 /**
