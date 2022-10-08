@@ -26,7 +26,8 @@ enum ERRORS
 {
     OK            ,
     ZERO_DIVISION ,
-    EMPTY_STACK
+    EMPTY_STACK   ,
+    UNDEFINED_CMD
 };
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
@@ -36,6 +37,7 @@ bool execution      (cpu_store *progress);
 bool approx_equal   (double a, double b);
 
 ERRORS cmd_arithmetic(cpu_store *progress, CMD mode);
+ERRORS cmd_out       (cpu_store *progress);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -108,6 +110,22 @@ ERRORS cmd_arithmetic(cpu_store *progress, CMD mode)
             StackPush(&progress->stack, var_1 / var_2);
             return OK;
     }
+
+    return UNDEFINED_CMD;
+}
+
+ERRORS cmd_out(cpu_store *progress)
+{
+    assert(progress != nullptr);
+
+    bool is_empty = false;
+    Stack_IsEmpty(&progress->stack, &is_empty);
+
+    if (is_empty) return EMPTY_STACK;
+
+    double var = 0;
+    StackPush(&progress->stack, var);
+    printf("%lg", var);
 
     return OK;
 }
