@@ -8,8 +8,6 @@
 #include <assert.h>
 #include <sys/stat.h>
 
-#include "logs.h"
-
 #define RED    "\e[1;31m"
 #define CANCEL "\e[0m"
 
@@ -71,12 +69,13 @@ unsigned get_file_size (const char *file_name);
 
 /*------------------------------------------------------------------------------------------------------*/
 
-
 int main(int argc, const char *argv[])
 {
     source program = {};
 
     program.src_code = read_file(argv[1], &program.src_size);
+
+    fprintf(stderr, "src_size = %lu\n", program.src_size);
 
     if (program.src_code == nullptr)
     {
@@ -86,6 +85,8 @@ int main(int argc, const char *argv[])
 
     header machine_info = {'G', 'D', 1, 0};
     void  *machine_data = assembler(&program, &machine_info.cmd_num);
+    
+    if (machine_data == nullptr) return 1;
 
     *(header *) machine_data = machine_info;
 
@@ -113,9 +114,14 @@ void *assembler(source *program, size_t *const cpu_size)
 
     bool error = false;
 
+    fprintf(stderr, "BEGIN\n");
+
+    fprintf(stderr, "cpu.machine_pos = %d\n", cpu.machine_pos);
+
+    skip_spaces(program, &info);
+
     while (info.cur_src_pos < program->src_size)
     {
-        skip_spaces(program, &info);
         read_cmd   (program, &info);
 
         CMD status_cmd = identify_cmd(info.cur_src_cmd);
@@ -128,7 +134,13 @@ void *assembler(source *program, size_t *const cpu_size)
         else
         {
             *((char *) cpu.machine_code + cpu.machine_pos) = status_cmd;
+            
             cpu.machine_pos += sizeof(char);
+            
+            fprintf(stderr, "\"%s\" ", info.cur_src_cmd);
+            fprintf(stderr, "%d\n", status_cmd);
+            fprintf(stderr, "cpu.machine_pos = %d\n", cpu.machine_pos);
+            fprintf(stderr, "cur_src_pos     = %d\n", info.cur_src_pos);
 
             if (status_cmd == CMD_PUSH)
             {
@@ -136,7 +148,13 @@ void *assembler(source *program, size_t *const cpu_size)
                 if (read_double(program, &info, &arg))
                 {
                     *(double *) ((char *) cpu.machine_code + cpu.machine_pos) = arg;
+                    
                     cpu.machine_pos += sizeof(double);
+
+                    fprintf(stderr, "\"%s\" ", info.cur_src_cmd);
+                    fprintf(stderr, "%lg\n", arg);
+                    fprintf(stderr, "cpu.machine_pos = %d\n", cpu.machine_pos);
+                    fprintf(stderr, "cur_src_pos     = %d\n", info.cur_src_pos);
                 }
                 else
                 {
@@ -145,11 +163,17 @@ void *assembler(source *program, size_t *const cpu_size)
                 }
             }
         }
+        skip_spaces(program, &info);
+        fprintf(stderr, "cur_src_pos     = %d\n", info.cur_src_pos);
     }
 
     if (error) return nullptr;
 
     *cpu_size = cpu.machine_pos - sizeof(header); //only machine commands (without header)
+
+    fprintf(stderr, "cpu.machine_pos = %d\n", cpu.machine_pos);
+    fprintf(stderr, "END\n");
+
     return cpu.machine_code;
 }
 
@@ -273,6 +297,8 @@ void write_file(void *data, const int data_size)
     assert(stream != nullptr);
     assert(data   != nullptr);
 
+    fprintf(stderr, "data_size = %d\n", data_size);
+
     fwrite(data, sizeof(char), data_size, stream);
     fclose(stream);
 }
@@ -292,8 +318,6 @@ char *read_file(const char *file_name, size_t *const size_ptr)
     assert(size_ptr  != nullptr);
 
     *size_ptr = get_file_size(file_name);
-
-    log_message(BLUE, "*size_ptr = %u\n", *size_ptr);
 
     if (*size_ptr == -1) return nullptr;
 
