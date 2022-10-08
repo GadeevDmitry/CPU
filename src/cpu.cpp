@@ -168,8 +168,8 @@ ERRORS cmd_out(cpu_store *progress)
     if (is_empty) return EMPTY_STACK;
 
     double var = 0;
-    StackPush(&progress->stack, var);
-    printf("%lg", var);
+    StackPop(&progress->stack, &var);
+    printf("%lg\n", var);
 
     return OK;
 }
