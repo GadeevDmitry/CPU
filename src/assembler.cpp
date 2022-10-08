@@ -117,7 +117,6 @@ void *assembler(source *program, size_t *const cpu_size)
     while (info.cur_src_pos < program->src_size)
     {
         read_cmd   (program, &info);
-
         CMD status_cmd = identify_cmd(info.cur_src_cmd);
 
         if (status_cmd == CMD_NOT_EXICTING)
@@ -128,7 +127,6 @@ void *assembler(source *program, size_t *const cpu_size)
         else
         {
             *((char *) cpu.machine_code + cpu.machine_pos) = status_cmd;
-            
             cpu.machine_pos += sizeof(char);
 
             if (status_cmd == CMD_PUSH)
@@ -137,7 +135,6 @@ void *assembler(source *program, size_t *const cpu_size)
                 if (read_double(program, &info, &arg))
                 {
                     *(double *) ((char *) cpu.machine_code + cpu.machine_pos) = arg;
-                    
                     cpu.machine_pos += sizeof(double);
                 }
                 else
@@ -147,6 +144,7 @@ void *assembler(source *program, size_t *const cpu_size)
                 }
             }
         }
+        
         skip_spaces(program, &info);
     }
 
