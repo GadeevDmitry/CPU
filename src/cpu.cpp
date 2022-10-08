@@ -46,11 +46,11 @@ bool   check_signature(cpu_store *progress);
 bool   execution      (cpu_store *progress);
 bool   approx_equal   (double a, double b);
 
-ERRORS cmd_arithmetic(cpu_store *progress, CMD mode);
+ERRORS cmd_arithmetic(cpu_store *progress, char mode);
 ERRORS cmd_out       (cpu_store *progress);
 ERRORS cmd_push      (cpu_store *progress);
 
-void   output_error  (ERRORS err);
+void   output_error  (ERRORS status);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -67,6 +67,11 @@ int main(int argc, char *argv[])
     }
 
     if (!check_signature(&progress)) return 1;
+
+    bool execution_status = execution(&progress);
+    if (!execution_status) return 1;
+
+    output_error(OK);
 }
 
 bool execution(cpu_store *progress)
@@ -78,14 +83,40 @@ bool execution(cpu_store *progress)
         char cmd = *((char *) progress->execution.machine_code + progress->execution.machine_pos);
         progress->execution.machine_pos += sizeof(char);
 
+        ERRORS status = OK;
         switch (cmd)
         {
+            case CMD_HLT : return true;
+
+            case CMD_PUSH: cmd_push(progress);
+                           break;
+
+            case CMD_ADD: case CMD_SUB: case CMD_MUL: case CMD_DIV:
+
+                           status = cmd_arithmetic(progress, cmd);
+
+                           if (status != OK) 
+                           {
+                                output_error(status);
+                                return false;
+                           }
+                           break;
+            
+            case CMD_OUT: status = cmd_out(progress);
+                          
+                          if (status != OK)
+                          {
+                            output_error(status);
+                            return false;
+                          }
+                          break;
         }
     }
+
     return true;
 }
 
-ERRORS cmd_arithmetic(cpu_store *progress, CMD mode)
+ERRORS cmd_arithmetic(cpu_store *progress, char mode)
 {
     assert(progress != nullptr);
 
@@ -177,14 +208,14 @@ bool check_signature(cpu_store *progress)
     return true;
 }
 
-void output_error(ERRORS err)
+void output_error(ERRORS status)
 {
-    if (err == OK)
+    if (status == OK)
     {
-        fprintf(stderr, GREEN "%s\n" CANCEL, error_messages[err]);
+        fprintf(stderr, GREEN "%s\n" CANCEL, error_messages[status]);
         return;
     }
-    fprintf(stderr, RED "ERROR: " CANCEL "%s\n", error_messages[err]);
+    fprintf(stderr, RED "ERROR: " CANCEL "%s\n", error_messages[status]);
 }
 
 bool approx_equal(double a, double b)
