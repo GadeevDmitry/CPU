@@ -5,6 +5,7 @@
 
 #define RED    "\e[1;31m"
 #define CANCEL "\e[0m"
+#define GREEN  "\e[0;32m"
 
 #include "cpu.h"
 #include "read_write.h"
@@ -28,6 +29,15 @@ enum ERRORS
     ZERO_DIVISION ,
     EMPTY_STACK   ,
     UNDEFINED_CMD
+};
+
+const char *error_messages[] = 
+{
+    "./CPU IS OK"       ,
+    "DIVISION BY ZERO"  ,
+    "STACK IS EMPTY"    ,
+    "UNDEFINED COMMAND"
+
 };
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
@@ -150,6 +160,16 @@ bool check_signature(cpu_store *progress)
     progress->execution.machine_pos = sizeof(header);
     
     return true;
+}
+
+void output_error(ERRORS err)
+{
+    if (err == OK)
+    {
+        fprintf(stderr, GREEN "%s\n" CANCEL, error_messages[err]);
+        return;
+    }
+    fprintf(stderr, RED "ERROR: " CANCEL "%s\n", error_messages[err]);
 }
 
 bool approx_equal(double a, double b)
