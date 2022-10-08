@@ -43,7 +43,7 @@ int main(int argc, const char *argv[])
 {
     source program = {};
 
-    program.src_code = read_file(argv[1], &program.src_size);
+    program.src_code = (char *) read_file(argv[1], &program.src_size);
 
     if (program.src_code == nullptr)
     {

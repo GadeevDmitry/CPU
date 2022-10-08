@@ -35,7 +35,7 @@ void write_file(void *data, const int data_size)
 *   @return pointer to the array with data and nullptr in case of error
 */
 
-char *read_file(const char *file_name, size_t *const size_ptr)
+void *read_file(const char *file_name, size_t *const size_ptr)
 {
     assert(file_name != nullptr);
     assert(size_ptr  != nullptr);
@@ -47,7 +47,7 @@ char *read_file(const char *file_name, size_t *const size_ptr)
     FILE *stream  = fopen(file_name, "r");
     if (  stream == nullptr) return nullptr;
 
-    char *data_ptr = (char *) calloc(*size_ptr, sizeof(char));
+    void *data_ptr = calloc(*size_ptr, sizeof(char));
 
     fread (data_ptr, sizeof(char), *size_ptr, stream);
     fclose(stream);
