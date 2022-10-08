@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <math.h>
 
 #define RED    "\e[1;31m"
 #define CANCEL "\e[0m"
@@ -11,6 +12,8 @@
 typedef double Stack_elem;
 #include "stack.h"
 
+const double DELTA = 0.000001;
+
 struct cpu_store
 {
     struct machine execution;
@@ -19,10 +22,20 @@ struct cpu_store
     Stack stack;
 };
 
+enum ERRORS
+{
+    OK            ,
+    ZERO_DIVISION ,
+    EMPTY_STACK
+};
+
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
 bool check_signature(cpu_store *progress);
 bool execution      (cpu_store *progress);
+bool approx_equal   (double a, double b);
+
+ERRORS cmd_arithmetic(cpu_store *progress, CMD mode);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -57,7 +70,7 @@ bool execution(cpu_store *progress)
     return true;
 }
 
-bool cmd_add(cpu_store *progress)
+ERRORS cmd_arithmetic(cpu_store *progress, CMD mode)
 {
     assert(progress != nullptr);
 
@@ -66,16 +79,37 @@ bool cmd_add(cpu_store *progress)
     bool is_empty = false;
     Stack_IsEmpty(&progress->stack, &is_empty);
 
-    if (is_empty) return false;
+    if (is_empty) return EMPTY_STACK;
 
     StackPop     (&progress->stack, &var_1);
     Stack_IsEmpty(&progress->stack, &is_empty);
 
-    if (is_empty) return false;
+    if (is_empty) return EMPTY_STACK;
 
     StackPop(&progress->stack, &var_2);
 
-    return var_1 + var_2;
+    switch (mode)
+    {
+        case CMD_ADD:
+            StackPush(&progress->stack, var_1 + var_2);
+            return OK;
+        
+        case CMD_SUB:
+            StackPush(&progress->stack, var_1 - var_2);
+            return OK;
+
+        case CMD_MUL:
+            StackPush(&progress->stack, var_1 * var_2);
+            return OK;
+        
+        case CMD_DIV:
+            if (approx_equal(var_2, 0)) return ZERO_DIVISION;
+
+            StackPush(&progress->stack, var_1 / var_2);
+            return OK;
+    }
+
+    return OK;
 }
 
 bool check_signature(cpu_store *progress)
@@ -98,4 +132,9 @@ bool check_signature(cpu_store *progress)
     progress->execution.machine_pos = sizeof(header);
     
     return true;
+}
+
+bool approx_equal(double a, double b)
+{
+    return fabs(a - b) < DELTA;
 }
