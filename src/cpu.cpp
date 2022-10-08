@@ -42,12 +42,15 @@ const char *error_messages[] =
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
-bool check_signature(cpu_store *progress);
-bool execution      (cpu_store *progress);
-bool approx_equal   (double a, double b);
+bool   check_signature(cpu_store *progress);
+bool   execution      (cpu_store *progress);
+bool   approx_equal   (double a, double b);
 
 ERRORS cmd_arithmetic(cpu_store *progress, CMD mode);
 ERRORS cmd_out       (cpu_store *progress);
+ERRORS cmd_push      (cpu_store *progress);
+
+void   output_error  (ERRORS err);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -73,7 +76,7 @@ bool execution(cpu_store *progress)
     while (progress->execution.machine_pos < progress->execution_size)
     {
         char cmd = *((char *) progress->execution.machine_code + progress->execution.machine_pos);
-        progress->execution.machine_pos++;
+        progress->execution.machine_pos += sizeof(char);
 
         switch (cmd)
         {
@@ -136,6 +139,18 @@ ERRORS cmd_out(cpu_store *progress)
     double var = 0;
     StackPush(&progress->stack, var);
     printf("%lg", var);
+
+    return OK;
+}
+
+ERRORS cmd_push(cpu_store *progress)
+{
+    assert(progress != nullptr);
+
+    double push_val = *(double *) ((char *) progress->execution.machine_code + progress->execution.machine_pos);
+    progress->execution.machine_pos += sizeof(double);
+
+    StackPush(&progress->stack, push_val);
 
     return OK;
 }
