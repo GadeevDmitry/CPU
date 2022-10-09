@@ -13,12 +13,12 @@ int main(int argc, const char *argv[])
     {
         if (!strcmp("--help", argv[1]))
         {
-            fprintf(stderr, "usage: ./make SRC_FILE                      - compile SRC_FILE in \"machine.cpu\" if it has not been compiled yet\n"
-                            "                                              or if last compilation was before last changes of this file.\n"
-                            "                                              Execute \"machine.cpu\".\n"
-                            "   or: ./make SRC_FILE -o EXE_FILE          - compile SRC_FILE in EXE_FILE. Execute EXE_FILE.\n"
-                            "   or: ./make -o EXE_FILE                   - Execute EXE_FILE.\n"
-                            "   or: ./make --help                        - Show this manual and exit.\n");
+            fprintf(stderr, "usage: ./make SRC_FILE               - compile SRC_FILE using \"./Asm\" in \"machine.cpu\" if it has not been compiled yet\n"
+                            "                                       or if last compilation was before last changes of this file.\n"
+                            "                                       Execute \"machine.cpu\".\n"
+                            "   or: ./make SRC_FILE -o EXE_FILE   - compile SRC_FILE using \"./Asm\" in EXE_FILE. Execute EXE_FILE.\n"
+                            "   or: ./make -o EXE_FILE            - Execute EXE_FILE.\n"
+                            "   or: ./make --help                 - Show this manual and exit.\n");
             return 0;
         }
 
