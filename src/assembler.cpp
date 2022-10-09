@@ -10,7 +10,6 @@
 #define RED    "\e[1;31m"
 #define CANCEL "\e[0m"
 
-#include "assembler.h"
 #include "read_write.h"
 
 struct source
@@ -25,6 +24,33 @@ struct src_location
     int cur_src_line;
 
     char *cur_src_cmd;
+};
+
+struct header
+{
+    char fst_let;
+    char sec_let;
+    char version;
+
+    size_t cmd_num;
+};
+
+struct machine
+{
+    void *machine_code;
+    int   machine_pos;
+};
+
+enum CMD
+{
+    CMD_HLT          ,
+    CMD_PUSH         ,
+    CMD_ADD          ,
+    CMD_SUB          ,
+    CMD_MUL          ,
+    CMD_DIV          ,
+    CMD_OUT          ,
+    CMD_NOT_EXICTING
 };
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/

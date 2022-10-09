@@ -7,12 +7,46 @@
 #define CANCEL "\e[0m"
 #define GREEN  "\e[0;32m"
 
-#include "cpu.h"
 #include "read_write.h"
 #include "stack.h"
 
 const   double DELTA = 0.000001;
 typedef double stack_el;
+
+const unsigned mask01 =   (1 << 4) - 1;
+const unsigned mask10 = ~((1 << 4) - 1);
+
+struct header
+{
+    char fst_let;
+    char sec_let;
+    char version;
+
+    size_t cmd_num;
+};
+
+struct machine
+{
+    void *machine_code;
+    int   machine_pos;
+};
+
+const int REG_NUM = 8;
+
+enum CMD
+{
+    CMD_HLT                   ,
+    CMD_PUSH                  ,
+    CMD_ADD                   ,
+    CMD_SUB                   ,
+    CMD_MUL                   ,
+    CMD_DIV                   ,
+    CMD_OUT                   ,
+    CMD_NOT_EXICTING          ,
+    CMD_NUM_ARG      = 1 << 4 ,
+    CMD_REG_ARG      = 1 << 5 ,
+    CMD_MEM_ARG      = 1 << 6
+};
 
 struct cpu_store
 {
@@ -38,6 +72,7 @@ const char *error_messages[] =
     "UNDEFINED COMMAND"
 
 };
+
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
@@ -84,10 +119,6 @@ bool execution(cpu_store *progress)
     {
         char cmd = *((char *) progress->execution.machine_code + progress->execution.machine_pos);
         progress->execution.machine_pos += sizeof(char);
-
-        /*-----------
-        fprintf(stderr, "cmd = %d\n", cmd);
-        //-----------*/
 
         ERRORS status = OK;
         switch ((cmd & 31))
@@ -186,22 +217,7 @@ ERRORS cmd_push(cpu_store *progress)
     stack_el push_val = *(stack_el *) ((char *) progress->execution.machine_code + progress->execution.machine_pos);
     progress->execution.machine_pos += sizeof(stack_el);
 
-    //-------------
-    //fprintf(stderr, "push_val = %lg\n", push_val);
-    //-------------
-
     stack_push(&progress->stk, &push_val);
-
-    /*-------------
-    fprintf(stderr, "stk.size     = %lu\n"
-                    "stk.capacity = %lu\n", progress->stk.size, progress->stk.capacity);
-
-    for (int i = 0; i < progress->stk.size; ++i)
-    {
-        fprintf(stderr, "%lg ", *(double *) ((char *) progress->stk.data + sizeof(double) * i));
-    }
-    fprintf(stderr, "\n");
-    //-------------*/
 
     return OK;
 }
