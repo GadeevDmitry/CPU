@@ -51,9 +51,10 @@ enum CMD
     CMD_DIV                   , // 5
     CMD_OUT                   , // 6
     CMD_NOT_EXICTING          , // 7
-    CMD_NUM_ARG      = 1 << 4 , // 8
-    CMD_REG_ARG      = 1 << 5 , // 9
-    CMD_MEM_ARG      = 1 << 6   //10
+    CMD_POP                   , // 8
+    CMD_NUM_ARG      = 1 << 4 ,
+    CMD_REG_ARG      = 1 << 5 ,
+    CMD_MEM_ARG      = 1 << 6
 };
 
 const int REG_NUM = 8;
@@ -75,6 +76,7 @@ const char *reg_names[] =
 CMD      identify_cmd    (const char *cmd);
 
 bool     cmd_push        (source *const program, src_location *const info, machine *const cpu);
+bool     cmd_pop         (source *const program, src_location *const info, machine *const cpu);
 bool     is_double       (const char *s, double *const val);
 bool     is_reg          (const char *s, char   *const pos);
 
@@ -147,6 +149,10 @@ void *assembler(source *program, size_t *const cpu_size)
             
             case CMD_PUSH:
                 if (!cmd_push(program, &info, &cpu)) error = true;
+                break;
+
+            case CMD_POP:
+                if (!cmd_pop(program, &info, &cpu)) error = true;
                 break;
 
             default:
@@ -224,6 +230,8 @@ CMD identify_cmd(const char *cmd)
 *   @param program [in]  - pointer to the structure with information about source
 *   @param info    [in]  - pointer to the structure with information abour location in source
 *   @param cpu     [out] - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
+*
+*   @return true if arguments are correct and false else
 */
 
 bool cmd_push(source *const program, src_location *const info, machine *const cpu)
@@ -232,7 +240,7 @@ bool cmd_push(source *const program, src_location *const info, machine *const cp
     assert(info    != nullptr);
     assert(cpu     != nullptr);
 
-    char cmd = 1;
+    char cmd = CMD_PUSH;
 
     skip_spaces(program, info);
     read_val   (program, info, '+');
@@ -309,6 +317,48 @@ bool cmd_push(source *const program, src_location *const info, machine *const cp
     } //if invalid arguments
     
     fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "\"%s\" is not a valid push-argument\n", info->cur_src_line, info->cur_src_cmd);
+    return false;
+}
+
+/**
+*   @brief Reads pop-arguments. Checks if they are valid.
+*
+*   @param program [in]  - pointer to the structure with information about source
+*   @param info    [in]  - pointer to the structure with information abour location in source
+*   @param cpu     [out] - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
+*
+*   @return true if arguments are correct and false else
+*/
+
+bool cmd_pop(source *const program, src_location *const info, machine *const cpu)
+{
+    assert(program != nullptr);
+    assert(info    != nullptr);
+    assert(cpu     != nullptr);
+
+    char cmd = CMD_POP;
+
+    skip_spaces(program, info);
+    read_val   (program, info, ' ');
+
+    char reg_arg = 0;
+    if (!strcmp(info->cur_src_cmd, "void"))
+    {
+        cmd = cmd | CMD_NUM_ARG;
+        add_machine_cmd(cpu, sizeof(char), &cmd);
+        
+        return true;
+    }
+    else if (is_reg(info->cur_src_cmd, &reg_arg))
+    {
+        cmd = cmd | CMD_REG_ARG;
+        add_machine_cmd(cpu, sizeof(char), &cmd);
+        add_machine_cmd(cpu, sizeof(char), &reg_arg);
+
+        return true;
+    }
+
+    fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "\"%s\" is not a valid pop-argument\n", info->cur_src_line, info->cur_src_cmd);
     return false;
 }
 

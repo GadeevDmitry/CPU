@@ -36,14 +36,15 @@ const int REG_NUM = 8;
 
 enum CMD
 {
-    CMD_HLT                   ,
-    CMD_PUSH                  ,
-    CMD_ADD                   ,
-    CMD_SUB                   ,
-    CMD_MUL                   ,
-    CMD_DIV                   ,
-    CMD_OUT                   ,
-    CMD_NOT_EXICTING          ,
+    CMD_HLT                   , // 0
+    CMD_PUSH                  , // 1
+    CMD_ADD                   , // 2
+    CMD_SUB                   , // 3
+    CMD_MUL                   , // 4
+    CMD_DIV                   , // 5
+    CMD_OUT                   , // 6
+    CMD_NOT_EXICTING          , // 7
+    CMD_POP                   , // 8
     CMD_NUM_ARG      = 1 << 4 ,
     CMD_REG_ARG      = 1 << 5 ,
     CMD_MEM_ARG      = 1 << 6
@@ -86,6 +87,7 @@ bool     approx_equal    (double a, double b);
 ERRORS   cmd_arithmetic  (cpu_store *progress, char mode);
 ERRORS   cmd_out         (cpu_store *progress);
 ERRORS   cmd_push        (cpu_store *progress);
+ERRORS   cmd_pop         (cpu_store *progress);
 
 void    *get_machine_cmd (cpu_store *const progress, const size_t val_size);
 void     output_error    (ERRORS status);
@@ -146,6 +148,11 @@ bool execution(cpu_store *progress)
 
             case CMD_PUSH:        
                 cmd_push(progress);
+                break;
+            
+            case CMD_POP:
+                status = cmd_pop(progress);
+                err_check(status);
                 break;
 
             case CMD_ADD: case CMD_SUB: case CMD_MUL: case CMD_DIV:
@@ -294,6 +301,33 @@ stack_el get_push_val(cpu_store *const progress, const char cmd)
     if (cmd & CMD_NUM_ARG) val +=            *(stack_el *) get_machine_cmd(progress, sizeof(stack_el)); 
 
     return val;
+}
+
+/**
+*   @brief Executes "pop" command.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*
+*   @return enum "ERRORS" error value
+*/
+
+ERRORS cmd_pop(cpu_store *progress)
+{
+    assert(progress != nullptr);
+
+    if (stack_empty(&progress->stk)) return EMPTY_STACK;
+
+    --progress->execution.machine_pos;
+    char cmd = *(char *) get_machine_cmd(progress, sizeof(char));
+
+    if      (cmd & CMD_NUM_ARG) stack_pop(&progress->stk);
+    else if (cmd & CMD_REG_ARG)
+    {
+        progress->regs[*(char *) get_machine_cmd(progress, sizeof(char))] = *(stack_el *) stack_front(&progress->stk);
+        stack_pop(&progress->stk);
+    }
+
+    return OK;
 }
 
 /**
