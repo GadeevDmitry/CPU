@@ -255,7 +255,7 @@ bool check_signature(cpu_store *progress)
         fprintf(stderr, "./CPU: Signature check falls\n");
         return false;
     }
-    if ((progress->version = signature.version) != 1)
+    if ((progress->version = signature.version) < 1 || progress->version > 2)
     {
         fprintf(stderr, "./CPU doesn't support the version %d\n", signature.version);
         return false;

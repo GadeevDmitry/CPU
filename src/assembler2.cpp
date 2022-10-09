@@ -43,17 +43,17 @@ struct machine
 
 enum CMD
 {
-    CMD_HLT                   ,
-    CMD_PUSH                  ,
-    CMD_ADD                   ,
-    CMD_SUB                   ,
-    CMD_MUL                   ,
-    CMD_DIV                   ,
-    CMD_OUT                   ,
-    CMD_NOT_EXICTING          ,
-    CMD_NUM_ARG      = 1 << 4 ,
-    CMD_REG_ARG      = 1 << 5 ,
-    CMD_MEM_ARG      = 1 << 6
+    CMD_HLT                   , // 0
+    CMD_PUSH                  , // 1
+    CMD_ADD                   , // 2
+    CMD_SUB                   , // 3
+    CMD_MUL                   , // 4
+    CMD_DIV                   , // 5
+    CMD_OUT                   , // 6
+    CMD_NOT_EXICTING          , // 7
+    CMD_NUM_ARG      = 1 << 4 , // 8
+    CMD_REG_ARG      = 1 << 5 , // 9
+    CMD_MEM_ARG      = 1 << 6   //10
 };
 
 const int REG_NUM = 8;
@@ -96,7 +96,7 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    header machine_info = {'G', 'D', 1, 0};
+    header machine_info = {'G', 'D', 2, 0};
     void  *machine_data = assembler(&program, &machine_info.cmd_num);
 
     if (machine_data == nullptr) return 1;
@@ -349,7 +349,7 @@ bool is_double(const char *s, double *const val)
     char  *check = nullptr;
     *val = strtod(s, &check);
 
-    return !(*check);
+    return !(*check) && check != s;
 }
 
 /**
