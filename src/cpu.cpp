@@ -121,6 +121,15 @@ int main(int argc, char *argv[])
             return false;                       \
         }
 
+/**
+*   @brief Manages of program executing by reading commands from "progress->execution.machine_code" and calling functions to execute them.
+*   @brief Prints messages about errors in stderr.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*
+*   @return true if there are not any errors and false else
+*/
+
 bool execution(cpu_store *progress)
 {
     assert(progress != nullptr);
@@ -158,6 +167,15 @@ bool execution(cpu_store *progress)
     return true;
 }
 
+/**
+*   @brief Reads another command or argument from "progress->execution.machine_code".
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*   @param val_size [in] - size (in bytes) of value to read
+*
+*   @return pointer to the value
+*/
+
 void *get_machine_cmd(cpu_store *const progress, const size_t val_size)
 {
     assert(progress != nullptr);
@@ -167,6 +185,15 @@ void *get_machine_cmd(cpu_store *const progress, const size_t val_size)
 
     return cmd;
 }
+
+/**
+*   @brief Executes arithmetic commands.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*   @param mode     [in] - mode encodes the arithmetic operation
+*
+*   @return enum "ERRORS" error value
+*/
 
 ERRORS cmd_arithmetic(cpu_store *progress, char mode)
 {
@@ -206,6 +233,14 @@ ERRORS cmd_arithmetic(cpu_store *progress, char mode)
     return OK;
 }
 
+/**
+*   @brief Executes "out" command.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*
+*   @return enum "ERRORS" error value
+*/
+
 ERRORS cmd_out(cpu_store *progress)
 {
     assert(progress != nullptr);
@@ -217,6 +252,14 @@ ERRORS cmd_out(cpu_store *progress)
 
     return OK;
 }
+
+/**
+*   @brief Executes "push" command.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*
+*   @return enum "ERRORS" error value
+*/
 
 ERRORS cmd_push(cpu_store *progress)
 {
@@ -231,6 +274,15 @@ ERRORS cmd_push(cpu_store *progress)
     return OK;
 }
 
+/**
+*   @brief Reads "push" arguments and translates them in "stack_el" value.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*   @param cmd      [in] - cmd encodes "push" comand and one of "push" mode
+*
+*   @return "stack_el" value      
+*/
+
 stack_el get_push_val(cpu_store *const progress, const char cmd)
 {
     assert(progress != nullptr);
@@ -243,6 +295,14 @@ stack_el get_push_val(cpu_store *const progress, const char cmd)
 
     return val;
 }
+
+/**
+*   @brief Checks if signature is correct. Stops execution if it is not correct.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*
+*   @return true if signature is correct and false else
+*/
 
 bool check_signature(cpu_store *progress)
 {
@@ -266,6 +326,14 @@ bool check_signature(cpu_store *progress)
     return true;
 }
 
+/**
+*   @brief Prints error-messages in stderr.
+*
+*   @param enum "ERRORS" value encoding the error
+*
+*   @return nothing
+*/
+
 void output_error(ERRORS status)
 {
     if (status == OK)
@@ -275,6 +343,15 @@ void output_error(ERRORS status)
     }
     fprintf(stderr, RED "ERROR: " CANCEL "%s\n", error_messages[status]);
 }
+
+/**
+*   @brief Compare two double numbers with error rate DELTA.
+*
+*   @param a [in] - first  number to compare
+*   @param b [in] - second number to compare
+*
+*   @return true if numbers are approximately equal and false else
+*/
 
 bool approx_equal(double a, double b)
 {

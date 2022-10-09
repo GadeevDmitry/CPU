@@ -229,7 +229,7 @@ bool read_double(source *const program, src_location *const info, double *const 
     char *check = nullptr;
     *arg = strtod(info->cur_src_cmd, &check);
 
-    return !(*check);
+    return !(*check) && check != info->cur_src_cmd;
 }
 
 /**
