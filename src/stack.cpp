@@ -18,10 +18,12 @@ void stack_ctor(stack *const stk, const size_t el_size)
 
 void stack_push(stack *const stk, const void *push_val)
 {
-    assert(stk != nullptr);
+    assert(stk      != nullptr);
+    assert(push_val != nullptr);
 
     stack_realloc(stk);
     memcpy((char *) stk->data + stk->size * stk->el_size, push_val, stk->el_size);
+    ++stk->size;
     stack_realloc(stk);
 }
 
@@ -36,7 +38,7 @@ void *stack_pop(stack *const stk)
     return (char *) stk->data + stk->size * stk->el_size;
 }
 
-void *stk_front(stack *const stk)
+void *stack_front(stack *const stk)
 {
     assert(stk != nullptr);
 
