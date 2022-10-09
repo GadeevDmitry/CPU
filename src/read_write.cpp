@@ -16,14 +16,16 @@
 *   @return nothing 
 */
 
-void write_file(void *data, const int data_size)
+bool write_file(const char *file_name, void *data, const int data_size)
 {
-    FILE  *stream = fopen("machine.cpu", "wb");
-    assert(stream != nullptr);
+    FILE  *stream = fopen(file_name, "wb");
+
+    if    (stream == nullptr) return false;
     assert(data   != nullptr);
 
     fwrite(data, sizeof(char), data_size, stream);
     fclose(stream);
+    return true;
 }
 
 /**

@@ -57,7 +57,12 @@ int main(int argc, const char *argv[])
 
     *(header *) machine_data = machine_info;
 
-    write_file(machine_data, machine_info.cmd_num + sizeof(header));
+    if (write_file(argv[2], machine_data, machine_info.cmd_num + sizeof(header)) == false)
+    {
+        fprintf(stderr, RED "ERROR: " CANCEL "Can't open the file to write the machine code in\n");
+        return 1;
+    }
+    return 0;
 }
 
 /**
