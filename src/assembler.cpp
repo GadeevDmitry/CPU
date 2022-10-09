@@ -10,7 +10,7 @@
 #define RED    "\e[1;31m"
 #define CANCEL "\e[0m"
 
-#include "cpu.h"
+#include "assembler.h"
 #include "read_write.h"
 
 struct source
