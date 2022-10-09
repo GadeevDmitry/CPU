@@ -220,6 +220,7 @@ CMD identify_cmd(const char *cmd)
     if (strcasecmp(cmd, "MUL" ) == 0) return CMD_MUL ;
     if (strcasecmp(cmd, "DIV" ) == 0) return CMD_DIV ;
     if (strcasecmp(cmd, "OUT" ) == 0) return CMD_OUT ;
+    if (strcasecmp(cmd, "POP" ) == 0) return CMD_POP ;
 
     return CMD_NOT_EXICTING;
 }
