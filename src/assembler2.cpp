@@ -151,6 +151,7 @@ void *assembler(source *program, size_t *const cpu_size)
 
             default:
                 add_machine_cmd(&cpu, sizeof(char), &status_cmd);
+                break;
         }
 
         skip_spaces(program, &info);

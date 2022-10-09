@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <string.h>
 
 #define RED    "\e[1;31m"
 #define CANCEL "\e[0m"
@@ -50,10 +51,12 @@ enum CMD
 
 struct cpu_store
 {
-    struct machine execution;
-    size_t execution_size;
+    machine execution;
+    size_t  execution_size;
 
-    stack stk;
+    char version;
+    stack    stk;
+    stack_el regs[REG_NUM + 1]; //zero register is invalid
 };
 
 enum ERRORS
@@ -76,15 +79,18 @@ const char *error_messages[] =
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
-bool   check_signature(cpu_store *progress);
-bool   execution      (cpu_store *progress);
-bool   approx_equal   (double a, double b);
+bool     check_signature (cpu_store *progress);
+bool     execution       (cpu_store *progress);
+bool     approx_equal    (double a, double b);
 
-ERRORS cmd_arithmetic(cpu_store *progress, char mode);
-ERRORS cmd_out       (cpu_store *progress);
-ERRORS cmd_push      (cpu_store *progress);
+ERRORS   cmd_arithmetic  (cpu_store *progress, char mode);
+ERRORS   cmd_out         (cpu_store *progress);
+ERRORS   cmd_push        (cpu_store *progress);
 
-void   output_error  (ERRORS status);
+void    *get_machine_cmd (cpu_store *const progress, const size_t val_size);
+void     output_error    (ERRORS status);
+
+stack_el get_push_val    (cpu_store *const progress, const char cmd);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -94,7 +100,6 @@ int main(int argc, char *argv[])
     stack_ctor(&progress.stk, sizeof(stack_el));
 
     progress.execution.machine_code = read_file(argv[1], &progress.execution_size);
-
     if (progress.execution.machine_code == nullptr)
     {
         fprintf(stderr, RED "ERROR: " CANCEL "Can't execute the file \"%s\"\n", argv[1]);
@@ -109,55 +114,58 @@ int main(int argc, char *argv[])
     output_error(OK);
 }
 
+#define err_check(status)                       \
+        if (status != OK)                       \
+        {                                       \
+            output_error(status);               \
+            return false;                       \
+        }
+
 bool execution(cpu_store *progress)
 {
     assert(progress != nullptr);
 
     progress->execution.machine_pos = sizeof(header);
-
     while (progress->execution.machine_pos < progress->execution_size)
     {
-        char cmd = *((char *) progress->execution.machine_code + progress->execution.machine_pos);
-        progress->execution.machine_pos += sizeof(char);
+        char cmd = *(char *) get_machine_cmd(progress, sizeof(char));
 
         ERRORS status = OK;
-        switch ((cmd & 31))
+        switch ((cmd & mask01))
         {
             case CMD_HLT : return true;
 
-            case CMD_PUSH:
-                
+            case CMD_PUSH:        
                 cmd_push(progress);
                 break;
 
             case CMD_ADD: case CMD_SUB: case CMD_MUL: case CMD_DIV:
-                
                 status = cmd_arithmetic(progress, cmd);
-                if (status != OK) 
-                {
-                    output_error(status);
-                    return false;
-                }
+                err_check(status);
                 break;
 
             case CMD_OUT:
-                
                 status = cmd_out(progress);
-                if (status != OK)
-                {
-                    output_error(status);
-                    return false;
-                }
+                err_check(status);
                 break;
 
             default:
-                
                 output_error(UNDEFINED_CMD);
                 return false;
         }
     }
 
     return true;
+}
+
+void *get_machine_cmd(cpu_store *const progress, const size_t val_size)
+{
+    assert(progress != nullptr);
+
+    void *cmd = (char *) progress->execution.machine_code + progress->execution.machine_pos;
+    progress->execution.machine_pos += val_size;
+
+    return cmd;
 }
 
 ERRORS cmd_arithmetic(cpu_store *progress, char mode)
@@ -214,12 +222,26 @@ ERRORS cmd_push(cpu_store *progress)
 {
     assert(progress != nullptr);
 
-    stack_el push_val = *(stack_el *) ((char *) progress->execution.machine_code + progress->execution.machine_pos);
-    progress->execution.machine_pos += sizeof(stack_el);
+    --progress->execution.machine_pos;
+    char cmd = *(char *) get_machine_cmd(progress, sizeof(char));
 
+    stack_el push_val = get_push_val(progress, cmd);
     stack_push(&progress->stk, &push_val);
 
     return OK;
+}
+
+stack_el get_push_val(cpu_store *const progress, const char cmd)
+{
+    assert(progress != nullptr);
+    
+    if (progress->version == 1) return *(stack_el *) get_machine_cmd(progress, sizeof(stack_el));
+    
+    stack_el val = 0;
+    if (cmd & CMD_REG_ARG) val += progress->regs[*(char *) get_machine_cmd(progress, sizeof(char))];
+    if (cmd & CMD_NUM_ARG) val +=            *(stack_el *) get_machine_cmd(progress, sizeof(stack_el)); 
+
+    return val;
 }
 
 bool check_signature(cpu_store *progress)
@@ -233,7 +255,7 @@ bool check_signature(cpu_store *progress)
         fprintf(stderr, "./CPU: Signature check falls\n");
         return false;
     }
-    if (signature.version != 1)
+    if ((progress->version = signature.version) != 1)
     {
         fprintf(stderr, "./CPU doesn't support the version %d\n", signature.version);
         return false;
