@@ -1,5 +1,5 @@
-#ifndef CPU_H
-#define CPU_H
+#ifndef ASM2_H
+#define ASM2_H
 
 struct header
 {
@@ -31,4 +31,18 @@ enum CMD
     CMD_MEM_ARG      = 1 << 6
 };
 
-#endif //CPU_H
+const int REG_NUM = 8;
+const char *reg_names[] = 
+{
+    "empty",
+    "rax"  ,
+    "rbx"  ,
+    "rcx"  ,
+    "rdx"  ,
+    "rex"  ,
+    "rfx"  ,
+    "rgx"  ,
+    "rhx"
+};
+
+#endif //ASM2_H

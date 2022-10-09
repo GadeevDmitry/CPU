@@ -90,7 +90,7 @@ bool execution(cpu_store *progress)
         //-----------*/
 
         ERRORS status = OK;
-        switch (cmd)
+        switch ((cmd & 31))
         {
             case CMD_HLT : return true;
 
