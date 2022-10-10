@@ -152,9 +152,11 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label)
             int mrk_size = strlen(info.cur_src_cmd);
             if (!tag_push(label, {program->src_code + (info.cur_src_pos - mrk_size), mrk_size, cpu.machine_pos}))
             {
-                fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "the mark \"%s\" has already met\n", info.cur_src_line, info.cur_src_cmd);
+                fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "the mark \"%s\" has already met\n", info.cur_src_line, info.cur_src_cmd);
             }
-
+            
+            ++info.cur_src_pos;
+            skip_spaces(program, &info);
             continue;
         }
 
@@ -162,7 +164,7 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label)
         {
             case CMD_NOT_EXICTING:
                 error = true;
-                fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "command \"%s\" is not existing\n", info.cur_src_line, info.cur_src_cmd);
+                fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "command \"%s\" is not existing\n", info.cur_src_line, info.cur_src_cmd);
                 break;
             
             case CMD_PUSH:
@@ -294,7 +296,7 @@ bool cmd_push(source *const program, src_location *const info, machine *const cp
             }
             else
             {
-                fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "\"%s\" is not a register name\n", info->cur_src_line, info->cur_src_cmd);
+                fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a register name\n", info->cur_src_line, info->cur_src_cmd);
                 return false;
             }
         } //if only double arg
@@ -328,7 +330,7 @@ bool cmd_push(source *const program, src_location *const info, machine *const cp
             }
             else
             {
-                fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "\"%s\" is not a valid double\n", info->cur_src_line, info->cur_src_cmd);
+                fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid double\n", info->cur_src_line, info->cur_src_cmd);
                 return false;
             }
         } //if only register arg
@@ -341,7 +343,7 @@ bool cmd_push(source *const program, src_location *const info, machine *const cp
         }
     } //if invalid arguments
     
-    fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "\"%s\" is not a valid push-argument\n", info->cur_src_line, info->cur_src_cmd);
+    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid push-argument\n", info->cur_src_line, info->cur_src_cmd);
     return false;
 }
 
@@ -383,7 +385,7 @@ bool cmd_pop(source *const program, src_location *const info, machine *const cpu
         return true;
     }
 
-    fprintf(stderr, "line %d: " RED "ERROR: " CANCEL "\"%s\" is not a valid pop-argument\n", info->cur_src_line, info->cur_src_cmd);
+    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid pop-argument\n", info->cur_src_line, info->cur_src_cmd);
     return false;
 }
 
@@ -402,6 +404,7 @@ bool cmd_jmp(source *const program, src_location *const info, machine *const cpu
     assert(program != nullptr);
     assert(info    != nullptr);
     assert(cpu     != nullptr);
+    assert(label   != nullptr);
 
     char cmd = CMD_JMP;
 
@@ -416,6 +419,8 @@ bool cmd_jmp(source *const program, src_location *const info, machine *const cpu
 
         return true;
     }
+
+    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a mark\n", info->cur_src_line, info->cur_src_cmd);
     return false;
 }
 
