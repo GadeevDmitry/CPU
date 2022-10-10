@@ -45,6 +45,7 @@ enum CMD
     CMD_OUT                   , // 6
     CMD_NOT_EXICTING          , // 7
     CMD_POP                   , // 8
+    CMD_JMP                   , // 9
     CMD_NUM_ARG      = 1 << 4 ,
     CMD_REG_ARG      = 1 << 5 ,
     CMD_MEM_ARG      = 1 << 6
@@ -88,6 +89,7 @@ ERRORS   cmd_arithmetic  (cpu_store *progress, char mode);
 ERRORS   cmd_out         (cpu_store *progress);
 ERRORS   cmd_push        (cpu_store *progress);
 ERRORS   cmd_pop         (cpu_store *progress);
+ERRORS   cmd_jmp         (cpu_store *progress);
 
 void    *get_machine_cmd (cpu_store *const progress, const size_t val_size);
 void     output_error    (ERRORS status);
@@ -153,6 +155,10 @@ bool execution(cpu_store *progress)
             case CMD_POP:
                 status = cmd_pop(progress);
                 err_check(status);
+                break;
+
+            case CMD_JMP:
+                status = cmd_jmp(progress);
                 break;
 
             case CMD_ADD: case CMD_SUB: case CMD_MUL: case CMD_DIV:
@@ -326,6 +332,24 @@ ERRORS cmd_pop(cpu_store *progress)
         progress->regs[*(char *) get_machine_cmd(progress, sizeof(char))] = *(stack_el *) stack_front(&progress->stk);
         stack_pop(&progress->stk);
     }
+
+    return OK;
+}
+
+/**
+*   @brief Executes "jmp" command.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*
+*   @return enum "ERRORS" error value
+*/
+
+ERRORS cmd_jmp(cpu_store *progress)
+{
+    assert(progress != nullptr);
+
+    int jmp_pos = *(int *) get_machine_cmd(progress, sizeof(int));
+    progress->execution.machine_pos = jmp_pos;
 
     return OK;
 }
