@@ -147,10 +147,14 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label)
         read_val(program, &info, ':');
         CMD status_cmd = identify_cmd(info.cur_src_cmd);
 
-        if (status_cmd == CMD_NOT_EXICTING && info.cur_src_pos < program->src_size && program->src_code[info.cur_src_pos] == ':')
+        //possibly mark
+        if (status_cmd == CMD_NOT_EXICTING && info.cur_src_pos < program->src_size)
         {
-            int mrk_size = strlen(info.cur_src_cmd);
-            if (!tag_push(label, {program->src_code + (info.cur_src_pos - mrk_size), mrk_size, cpu.machine_pos}))
+            int mrk_size              = strlen(info.cur_src_cmd);
+            char *possible_mark_begin = program->src_code + (info.cur_src_pos - mrk_size);
+            skip_spaces(program, &info);
+
+            if (program->src_code[info.cur_src_pos] != ':' || !tag_push(label, {possible_mark_begin, mrk_size, cpu.machine_pos}))
             {
                 fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "the mark \"%s\" has already met\n", info.cur_src_line, info.cur_src_cmd);
             }

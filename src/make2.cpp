@@ -13,12 +13,12 @@ int main(int argc, const char *argv[])
     {
         if (!strcmp("--help", argv[1]))
         {
-            fprintf(stderr, "usage: ./make SRC_FILE             - compile SRC_FILE using \"./Asm2\" in \"machine2.cpu\" if it has not been compiled yet\n"
-                            "                                     or if last compilation was before last changes of this file.\n"
+            fprintf(stderr, "usage: ./make2 SRC_FILE             - compile SRC_FILE using \"./Asm2\" in \"machine2.cpu\" if it has not been compiled\n"
+                            "                                     yet or if last compilation was before last changes of this file.\n"
                             "                                     Execute \"machine2.cpu\".\n"
-                            "   or: ./make SRC_FILE -o EXE_FILE - compile SRC_FILE using \"./Asm\" in EXE_FILE. Execute EXE_FILE.\n"
-                            "   or: ./make -o EXE_FILE          - Execute EXE_FILE.\n"
-                            "   or: ./make --help               - Show this manual and exit.\n");
+                            "   or: ./make2 SRC_FILE -o EXE_FILE - compile SRC_FILE using \"./Asm\" in EXE_FILE. Execute EXE_FILE.\n"
+                            "   or: ./make2 -o EXE_FILE          - Execute EXE_FILE.\n"
+                            "   or: ./make2 --help               - Show this manual and exit.\n");
             return 0;
         }
 
@@ -64,6 +64,6 @@ int main(int argc, const char *argv[])
     else
     {
         fprintf(stderr, "wrong format\n"
-                        "print \"./make --help\" to get manual\n");
+                        "print \"./make2 --help\" to get manual\n");
     }
 }
