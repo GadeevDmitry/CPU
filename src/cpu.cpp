@@ -46,9 +46,9 @@ enum CMD
     CMD_NOT_EXICTING          , // 7
     CMD_POP                   , // 8
     CMD_JMP                   , // 9
-    CMD_NUM_ARG      = 1 << 4 ,
-    CMD_REG_ARG      = 1 << 5 ,
-    CMD_MEM_ARG      = 1 << 6
+    CMD_NUM_ARG      = 1 << 5 ,
+    CMD_REG_ARG      = 1 << 6 ,
+    CMD_MEM_ARG      = 1 << 7
 };
 
 struct cpu_store
@@ -85,7 +85,7 @@ bool     check_signature (cpu_store *progress);
 bool     execution       (cpu_store *progress);
 bool     approx_equal    (double a, double b);
 
-ERRORS   cmd_arithmetic  (cpu_store *progress, char mode);
+ERRORS   cmd_arithmetic  (cpu_store *progress, unsigned char mode);
 ERRORS   cmd_out         (cpu_store *progress);
 ERRORS   cmd_push        (cpu_store *progress);
 ERRORS   cmd_pop         (cpu_store *progress);
@@ -94,7 +94,7 @@ ERRORS   cmd_jmp         (cpu_store *progress);
 void    *get_machine_cmd (cpu_store *const progress, const size_t val_size);
 void     output_error    (ERRORS status);
 
-stack_el get_push_val    (cpu_store *const progress, const char cmd);
+stack_el get_push_val    (cpu_store *const progress, const unsigned char cmd);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -141,7 +141,7 @@ bool execution(cpu_store *progress)
     progress->execution.machine_pos = sizeof(header);
     while (progress->execution.machine_pos < progress->execution_size)
     {
-        char cmd = *(char *) get_machine_cmd(progress, sizeof(char));
+        unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
 
         ERRORS status = OK;
         switch ((cmd & mask01))
@@ -208,7 +208,7 @@ void *get_machine_cmd(cpu_store *const progress, const size_t val_size)
 *   @return enum "ERRORS" error value
 */
 
-ERRORS cmd_arithmetic(cpu_store *progress, char mode)
+ERRORS cmd_arithmetic(cpu_store *progress, unsigned char mode)
 {
     assert(progress != nullptr);
 
@@ -285,7 +285,7 @@ ERRORS cmd_push(cpu_store *progress)
     assert(progress != nullptr);
 
     --progress->execution.machine_pos;
-    char cmd = *(char *) get_machine_cmd(progress, sizeof(char));
+    unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
 
     stack_el push_val = get_push_val(progress, cmd);
     stack_push(&progress->stk, &push_val);
@@ -302,7 +302,7 @@ ERRORS cmd_push(cpu_store *progress)
 *   @return "stack_el" value      
 */
 
-stack_el get_push_val(cpu_store *const progress, const char cmd)
+stack_el get_push_val(cpu_store *const progress, const unsigned char cmd)
 {
     assert(progress != nullptr);
     
@@ -331,7 +331,7 @@ ERRORS cmd_pop(cpu_store *progress)
     if (stack_empty(&progress->stk)) return EMPTY_STACK;
 
     --progress->execution.machine_pos;
-    char cmd = *(char *) get_machine_cmd(progress, sizeof(char));
+    unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
 
     if      (cmd & CMD_NUM_ARG) stack_pop(&progress->stk);
     else if (cmd & CMD_REG_ARG)

@@ -55,9 +55,9 @@ enum CMD
     CMD_NOT_EXICTING          , // 7
     CMD_POP                   , // 8
     CMD_JMP                   , // 9
-    CMD_NUM_ARG      = 1 << 4 ,
-    CMD_REG_ARG      = 1 << 5 ,
-    CMD_MEM_ARG      = 1 << 6
+    CMD_NUM_ARG      = 1 << 5 ,
+    CMD_REG_ARG      = 1 << 6 ,
+    CMD_MEM_ARG      = 1 << 7
 };
 
 enum MARK
@@ -275,7 +275,7 @@ bool cmd_push(source *const program, src_location *const info, machine *const cp
     assert(info    != nullptr);
     assert(cpu     != nullptr);
 
-    char cmd = CMD_PUSH;
+    unsigned char cmd = CMD_PUSH;
 
     skip_spaces(program, info);
     read_val   (program, info, '+');
@@ -371,7 +371,7 @@ bool cmd_pop(source *const program, src_location *const info, machine *const cpu
     assert(info    != nullptr);
     assert(cpu     != nullptr);
 
-    char cmd = CMD_POP;
+    unsigned char cmd = CMD_POP;
 
     skip_spaces(program, info);
     read_val   (program, info, ' ');
@@ -420,7 +420,7 @@ bool cmd_jmp(source *const program, src_location *const info, machine *const cpu
 
     assert(mark_mode == 0 || mark_mode == 1);
 
-    char cmd = CMD_JMP;
+    unsigned char cmd = CMD_JMP;
 
     skip_spaces(program, info);
     read_val   (program, info, ' ');
