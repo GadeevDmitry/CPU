@@ -146,9 +146,9 @@ bool execution(cpu_store *progress)
         ERRORS status = OK;
         switch ((cmd & mask01))
         {
-            case CMD_HLT : return true;
+            case CMD_HLT : /*fprintf(stderr, "HLT\n");*/ return true;
 
-            case CMD_PUSH:        
+            case CMD_PUSH:
                 cmd_push(progress);
                 break;
             
@@ -225,15 +225,19 @@ ERRORS cmd_arithmetic(cpu_store *progress, char mode)
     switch (mode)
     {
         case CMD_ADD:
+            //fprintf(stderr, "ADD\n");
             ans = var_1 + var_2;
             break;
         case CMD_SUB:
+            //fprintf(stderr, "SUB\n");
             ans = var_2 - var_1;
             break;
         case CMD_MUL:
+            //fprintf(stderr, "MUL\n");
             ans = var_1 * var_2;
             break;
         case CMD_DIV:
+            //fprintf(stderr, "DIV\n");
             if (approx_equal(var_1, 0)) return ZERO_DIVISION;
             ans = var_2 / var_1;
             break;
@@ -256,6 +260,7 @@ ERRORS cmd_arithmetic(cpu_store *progress, char mode)
 
 ERRORS cmd_out(cpu_store *progress)
 {
+    //fprintf(stderr, "OUT\n");
     assert(progress != nullptr);
 
     if (stack_empty(&progress->stk)) return EMPTY_STACK;
@@ -276,6 +281,7 @@ ERRORS cmd_out(cpu_store *progress)
 
 ERRORS cmd_push(cpu_store *progress)
 {
+    //fprintf(stderr, "PUSH\n");
     assert(progress != nullptr);
 
     --progress->execution.machine_pos;
@@ -319,6 +325,7 @@ stack_el get_push_val(cpu_store *const progress, const char cmd)
 
 ERRORS cmd_pop(cpu_store *progress)
 {
+    //fprintf(stderr, "POP\n");
     assert(progress != nullptr);
 
     if (stack_empty(&progress->stk)) return EMPTY_STACK;
@@ -346,9 +353,13 @@ ERRORS cmd_pop(cpu_store *progress)
 
 ERRORS cmd_jmp(cpu_store *progress)
 {
+    //fprintf(stderr, "JMP\n");
     assert(progress != nullptr);
 
     int jmp_pos = *(int *) get_machine_cmd(progress, sizeof(int));
+    //-----------
+    //fprintf(stderr, "jmp_pos = %d\n", jmp_pos);
+    //-----------
     progress->execution.machine_pos = jmp_pos;
 
     return OK;
@@ -367,7 +378,10 @@ bool check_signature(cpu_store *progress)
     assert(progress != nullptr);
 
     header signature = *(header *) progress->execution.machine_code;
-
+    //------------
+    //fprintf(stderr, "signature.cmd_num = %d\n", signature.cmd_num);
+    //fprintf(stderr, "header_size       = %d\n", sizeof(header));
+    //------------
     if (signature.fst_let != 'G' || signature.sec_let != 'D')
     {
         fprintf(stderr, "./CPU: Signature check falls\n");

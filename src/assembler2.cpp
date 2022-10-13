@@ -9,6 +9,7 @@
 
 #define RED    "\e[1;31m"
 #define CANCEL "\e[0m"
+#define GREEN  "\e[0;32m"
 
 #include "read_write.h"
 #include "tag.h"
@@ -59,6 +60,12 @@ enum CMD
     CMD_MEM_ARG      = 1 << 6
 };
 
+enum MARK
+{
+    MARK_GET   , // 0
+    MARK_CHECK   // 1
+};
+
 const int REG_NUM = 8;
 const char *reg_names[] = 
 {
@@ -79,7 +86,8 @@ CMD      identify_cmd    (const char *cmd);
 
 bool     cmd_push        (source *const program, src_location *const info, machine *const cpu);
 bool     cmd_pop         (source *const program, src_location *const info, machine *const cpu);
-bool     cmd_jmp         (source *const program, src_location *const info, machine *const cpu, tag *const label);
+bool     cmd_jmp         (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode);
+bool     get_mark        (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode);
 bool     is_double       (const char *s, double *const val);
 bool     is_reg          (const char *s, char   *const pos);
 
@@ -87,15 +95,15 @@ void     tag_ctor        (tag *const label);
 void     add_machine_cmd (machine *const cpu, const size_t val_size, void *val_ptr);
 void     read_val        (source *program, src_location *info, const char sep);
 void     skip_spaces     (source *const program, src_location *const info);
-void    *assembler       (source *program, size_t *const cpu_size, tag *const label);
+void    *assembler       (source *program, size_t *const cpu_size, tag *const label, const char mark_mode);
 
 /*------------------------------------------------------------------------------------------------------*/
 
 int main(int argc, const char *argv[])
 {
-    source program = {};
-    program.src_code = (char *) read_file(argv[1], &program.src_size);
+    source program  = {};
 
+    program.src_code  = (char *) read_file(argv[1], &program.src_size);
     if (program.src_code == nullptr)
     {
         fprintf(stderr, RED "ERROR: " CANCEL "Can't open the file \"%s\"\n", argv[1]);
@@ -106,10 +114,9 @@ int main(int argc, const char *argv[])
     tag_ctor(&label);
 
     header machine_info = {'G', 'D', 2, 0};
-    void  *machine_data = assembler(&program, &machine_info.cmd_num, &label);
+    assembler(&program, &machine_info.cmd_num, &label, MARK_GET);
 
-    if (machine_data == nullptr) return 1;
-
+    void *machine_data = assembler(&program, &machine_info.cmd_num, &label, MARK_CHECK);
     *(header *) machine_data = machine_info;
 
     if (write_file(argv[2], machine_data, machine_info.cmd_num + sizeof(header)) == false)
@@ -117,19 +124,23 @@ int main(int argc, const char *argv[])
         fprintf(stderr, RED "ERROR: " CANCEL "Can't open the file to write the machine code in\n");
         return 1;
     }
+
+    fprintf(stderr, GREEN "./ASM2 IS OK\n" CANCEL);
     return 0;
 }
 
 /**
 *   @brief Translates "source code" to "machine code".
 *
-*   @param program  [in]  - pointer to the structure with information about source
-*   @param cpu_size [out] - pointer to the variable to put the size of "machine code" (in bytes) in
+*   @param program   [in]  - pointer to the structure with information about source
+*   @param cpu_size  [out] - pointer to the variable to put the size of "machine code" (in bytes) in
+*   @param label     [out] - pointer to the "tag" variable to put marks in
+*   @param mark_mode [in]  - mode of cmd-jump module
 *
 *   @return array consisting of "machine code" 
 */
 
-void *assembler(source *program, size_t *const cpu_size, tag *const label)
+void *assembler(source *program, size_t *const cpu_size, tag *const label, const char mark_mode)
 {
     assert(program != nullptr);
 
@@ -147,28 +158,15 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label)
         read_val(program, &info, ':');
         CMD status_cmd = identify_cmd(info.cur_src_cmd);
 
-        //possibly mark
-        if (status_cmd == CMD_NOT_EXICTING && info.cur_src_pos < program->src_size)
-        {
-            int mrk_size              = strlen(info.cur_src_cmd);
-            char *possible_mark_begin = program->src_code + (info.cur_src_pos - mrk_size);
-            skip_spaces(program, &info);
-
-            if (program->src_code[info.cur_src_pos] != ':' || !tag_push(label, {possible_mark_begin, mrk_size, cpu.machine_pos}))
-            {
-                fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "the mark \"%s\" has already met\n", info.cur_src_line, info.cur_src_cmd);
-            }
-            
-            ++info.cur_src_pos;
-            skip_spaces(program, &info);
-            continue;
-        }
-
         switch (status_cmd)
         {
             case CMD_NOT_EXICTING:
-                error = true;
-                fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "command \"%s\" is not existing\n", info.cur_src_line, info.cur_src_cmd);
+                if (!get_mark(program, &info, &cpu, label, mark_mode))
+                {
+                    error = true;
+                    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "command \"%s\" is not existing\n", info.cur_src_line, info.cur_src_cmd);
+                    break;
+                }
                 break;
             
             case CMD_PUSH:
@@ -180,7 +178,7 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label)
                 break;
 
             case CMD_JMP:
-                if (!cmd_jmp(program, &info, &cpu, label)) error = true;
+                if (!cmd_jmp(program, &info, &cpu, label, mark_mode)) error = true;
                 break;
 
             default:
@@ -191,6 +189,12 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label)
         skip_spaces(program, &info);
     }
 
+    free(info.cur_src_cmd);
+    if (mark_mode == MARK_GET)
+    {
+        free(cpu.machine_code);
+        return nullptr;
+    }
     if (error) return nullptr;
 
     *cpu_size = cpu.machine_pos - sizeof(header); //only machine commands (without header)
@@ -394,21 +398,27 @@ bool cmd_pop(source *const program, src_location *const info, machine *const cpu
 }
 
 /**
-*   @brief Reads jmp-arguments. Check if they are valid. Adds commands and arguments in "cpu->machine.code".
+*   @brief Reads jmp-arguments. Works in two modes.
+*   @brief If "mark_mode" is MARK_GET,   in case of non-existent mark it skips this mark and continue the assembler. (This mark can appear in the code below).
+*   @brief If "mark_mode" is MARK_CHECK, in case of non-existent mark it give an error-message.  
 *
-*   @param program [in]  - pointer to the structure with information about source
-*   @param info    [in]  - pointer to the structure with information abour location in source
-*   @param cpu     [out] - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
+*   @param program   [in]      - pointer to the structure with information about source
+*   @param info      [in]      - pointer to the structure with information abour location in source
+*   @param cpu       [out]     - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
+8   @param label     [in][out] - pointer to the store of marks
+*   @param mark_mode [in]      - mode of the function
 *
-*   @return true if arguments are correct and false else
+*   @return in MARK_CHECK-mode in case of non-existent mark returns false and true else
 */
 
-bool cmd_jmp(source *const program, src_location *const info, machine *const cpu, tag *const label)
+bool cmd_jmp(source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode)
 {
     assert(program != nullptr);
     assert(info    != nullptr);
     assert(cpu     != nullptr);
     assert(label   != nullptr);
+
+    assert(mark_mode == 0 || mark_mode == 1);
 
     char cmd = CMD_JMP;
 
@@ -424,7 +434,68 @@ bool cmd_jmp(source *const program, src_location *const info, machine *const cpu
         return true;
     }
 
+    if (mark_mode == MARK_GET)
+    {
+        char temp_invalid_ptr = -1;
+        add_machine_cmd(cpu, sizeof(char), &cmd);
+        add_machine_cmd(cpu, sizeof(int) , &temp_invalid_ptr);
+        return true;
+    }
+
     fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a mark\n", info->cur_src_line, info->cur_src_cmd);
+    return false;
+}
+
+/**
+*   @brief Function working with marks. Works in two modes.
+*   @brief In MARK_GET-mode it determines if another string is a mark declaration or not. In the first case it puts the mark in "label".
+*   @brief In MARK_CHECK-mode it immediately returns.
+*
+*   @param program   [in]      - pointer to the structure with information about source
+*   @param info      [in]      - pointer to the structure with information abour location in source
+*   @param cpu       [out]     - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
+*   @param label     [in][out] - pointer to the store of marks
+*   @param mark_mode [in]      - mode of the function
+*
+*   @return in MARK_GET-mode in case of invalid mark(already declareted mark or string with no ':' character in the end) false and true else
+*/
+
+bool get_mark(source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode)
+{
+    assert(program != nullptr);
+    assert(info    != nullptr);
+    assert(cpu     != nullptr);
+    assert(label   != nullptr);
+
+    assert(mark_mode == 0 || mark_mode == 1);
+
+    if (mark_mode == MARK_CHECK)
+    {
+        ++info->cur_src_pos;
+        return true;
+    }
+    if (info->cur_src_pos < program->src_size)
+    {
+        int mrk_size              = strlen(info->cur_src_cmd);
+        char *possible_mark_begin = program->src_code + (info->cur_src_pos - mrk_size);
+        skip_spaces(program, info);
+
+        if (program->src_code[info->cur_src_pos] == ':' && tag_push(label, {possible_mark_begin, mrk_size, cpu->machine_pos}))
+        {
+            ++info->cur_src_pos;
+            skip_spaces(program, info);
+
+            return true;
+        }
+        if (program->src_code[info->cur_src_pos] == ':')
+        {
+            fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "the mark \"%s\" has already met\n", info->cur_src_line, info->cur_src_cmd);
+            ++info->cur_src_pos;
+            skip_spaces(program, info);
+
+            return false;
+        }
+    }
     return false;
 }
 
