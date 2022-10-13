@@ -14,8 +14,7 @@
 const   double DELTA = 0.000001;
 typedef double stack_el;
 
-const unsigned mask01 =   (1 << 4) - 1;
-const unsigned mask10 = ~((1 << 4) - 1);
+const unsigned mask01 = 31;
 
 struct header
 {
@@ -33,6 +32,7 @@ struct machine
 };
 
 const int REG_NUM = 8;
+const int RAM_NUM = 10000;
 
 enum CMD
 {
@@ -57,8 +57,12 @@ struct cpu_store
     size_t  execution_size;
 
     char version;
-    stack    stk;
-    stack_el regs[REG_NUM + 1]; //zero register is invalid
+
+    stack stk;
+    stack_el  ram [RAM_NUM];
+    stack_el  regs[REG_NUM / 2];
+    long long_regs[REG_NUM / 2 + 1]; //zero register is invalid
+    
 };
 
 enum ERRORS
@@ -66,35 +70,39 @@ enum ERRORS
     OK            ,
     ZERO_DIVISION ,
     EMPTY_STACK   ,
-    UNDEFINED_CMD
+    UNDEFINED_CMD ,
+    MEMORY_LIMIT
 };
 
 const char *error_messages[] = 
 {
-    "./CPU IS OK"       ,
-    "DIVISION BY ZERO"  ,
-    "STACK IS EMPTY"    ,
-    "UNDEFINED COMMAND"
-
+    "./CPU IS OK"           ,
+    "DIVISION BY ZERO"      ,
+    "STACK IS EMPTY"        ,
+    "UNDEFINED COMMAND"     ,
+    "MEMORY LIMIT EXCEEDED"
 };
 
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
-bool     check_signature (cpu_store *progress);
-bool     execution       (cpu_store *progress);
-bool     approx_equal    (double a, double b);
+bool     check_signature  (cpu_store *progress);
+bool     execution        (cpu_store *progress);
+bool     approx_equal     (double a, double b);
 
-ERRORS   cmd_arithmetic  (cpu_store *progress, unsigned char mode);
-ERRORS   cmd_out         (cpu_store *progress);
-ERRORS   cmd_push        (cpu_store *progress);
-ERRORS   cmd_pop         (cpu_store *progress);
-ERRORS   cmd_jmp         (cpu_store *progress);
+ERRORS   cmd_arithmetic   (cpu_store *progress, unsigned char mode);
+ERRORS   cmd_out          (cpu_store *progress);
+ERRORS   cmd_push         (cpu_store *progress);
+ERRORS   cmd_pop          (cpu_store *progress);
+ERRORS   cmd_jmp          (cpu_store *progress);
 
-void    *get_machine_cmd (cpu_store *const progress, const size_t val_size);
-void     output_error    (ERRORS status);
+long     get_memory_val   (cpu_store *const progress, const unsigned char cmd);
 
-stack_el get_push_val    (cpu_store *const progress, const unsigned char cmd);
+void    *get_machine_cmd  (cpu_store *const progress, const size_t val_size);
+void     output_error     (ERRORS status);
+
+stack_el get_reg_val      (cpu_store *const progress, const char reg_num);
+stack_el get_stack_el_val (cpu_store *progress, const unsigned char cmd);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -287,32 +295,20 @@ ERRORS cmd_push(cpu_store *progress)
     --progress->execution.machine_pos;
     unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
 
-    stack_el push_val = get_push_val(progress, cmd);
+    if (cmd & CMD_MEM_ARG)
+    {
+        long ram_index = get_memory_val(progress, cmd);
+
+        if (ram_index >= RAM_NUM) return MEMORY_LIMIT;
+        
+        stack_push(&progress->stk, &progress->ram[ram_index]);
+        return OK;
+    }
+    
+    stack_el push_val = get_stack_el_val(progress, cmd);
     stack_push(&progress->stk, &push_val);
 
     return OK;
-}
-
-/**
-*   @brief Reads "push" arguments and translates them in "stack_el" value.
-*
-*   @param progress [in] - "cpu_store" contains all information about program
-*   @param cmd      [in] - cmd encodes "push" comand and one of "push" mode
-*
-*   @return "stack_el" value      
-*/
-
-stack_el get_push_val(cpu_store *const progress, const unsigned char cmd)
-{
-    assert(progress != nullptr);
-    
-    if (progress->version == 1) return *(stack_el *) get_machine_cmd(progress, sizeof(stack_el));
-    
-    stack_el val = 0;
-    if (cmd & CMD_REG_ARG) val += progress->regs[*(char *) get_machine_cmd(progress, sizeof(char))];
-    if (cmd & CMD_NUM_ARG) val +=            *(stack_el *) get_machine_cmd(progress, sizeof(stack_el)); 
-
-    return val;
 }
 
 /**
@@ -333,14 +329,67 @@ ERRORS cmd_pop(cpu_store *progress)
     --progress->execution.machine_pos;
     unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
 
-    if      (cmd & CMD_NUM_ARG) stack_pop(&progress->stk);
-    else if (cmd & CMD_REG_ARG)
+    if (cmd & CMD_MEM_ARG)
     {
-        progress->regs[*(char *) get_machine_cmd(progress, sizeof(char))] = *(stack_el *) stack_front(&progress->stk);
-        stack_pop(&progress->stk);
-    }
+        long ram_index = get_memory_val(progress, cmd);
 
+        if (ram_index >= RAM_NUM) return MEMORY_LIMIT;
+
+        progress->ram[ram_index] = *(stack_el *) stack_front(&progress->stk);
+        stack_pop(&progress->stk);
+        
+        return OK;
+    }
+    if (cmd & CMD_REG_ARG)
+    {
+        char reg_pos = *(char *) get_machine_cmd(progress, sizeof(char));
+        if (reg_pos <= REG_NUM / 2) progress->long_regs[reg_pos] = (long) *(stack_el *) stack_front(&progress->stk);
+        else
+        {
+            reg_pos -= 5; //5 - number of long-type registers
+            progress->regs[reg_pos] = *(stack_el *) stack_front(&progress->stk);
+        }
+    }
     return OK;
+}
+
+long get_memory_val(cpu_store *const progress, const unsigned char cmd)
+{
+    assert(progress != nullptr);
+
+    long ram_index = 0;
+    if (cmd & CMD_REG_ARG) ram_index += get_reg_val(progress, *(char *) get_machine_cmd(progress, sizeof(char)));
+    if (cmd & CMD_NUM_ARG) ram_index += *(long *) get_machine_cmd(progress, sizeof(long));
+
+    return ram_index;
+}
+
+stack_el get_stack_el_val(cpu_store *progress, const unsigned char cmd)
+{
+    assert(progress != nullptr);
+
+    stack_el val = 0;
+    if (cmd & CMD_REG_ARG) val += get_reg_val(progress, *(char *) get_machine_cmd(progress, sizeof(char)));
+    if (cmd & CMD_NUM_ARG) val += *(stack_el *) get_machine_cmd(progress, sizeof(stack_el));
+
+    return val;
+}
+
+/**
+*   @brief Gets value from "*progress" registers by the register number.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*   @param reg_num  [in] - number of register to take the value from
+*
+*   @return value from the register
+*/
+
+stack_el get_reg_val(cpu_store *const progress, const char reg_num)
+{
+    assert(progress != nullptr);
+
+    if (reg_num <= REG_NUM / 2) return progress->long_regs[reg_num];
+    return progress->long_regs[reg_num - 5];
 }
 
 /**

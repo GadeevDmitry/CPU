@@ -82,20 +82,23 @@ const char *reg_names[] =
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
-CMD      identify_cmd    (const char *cmd);
+CMD   identify_cmd      (const char *cmd);
 
-bool     cmd_push        (source *const program, src_location *const info, machine *const cpu);
-bool     cmd_pop         (source *const program, src_location *const info, machine *const cpu);
-bool     cmd_jmp         (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode);
-bool     get_mark        (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode);
-bool     is_double       (const char *s, double *const val);
-bool     is_reg          (const char *s, char   *const pos);
+bool  read_push_pop_arg (source *const program, src_location *const info, machine *const cpu, unsigned char cmd);
+bool  cmd_pop           (source *const program, src_location *const info, machine *const cpu);
+bool  cmd_jmp           (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode);
+bool  get_mark          (source *const program, src_location *const info, machine *const cpu, tag *const label, int possible_mrk_beg, const char mark_mode);
+bool  is_double         (const char *s, double *const val);
+bool  is_long           (const char *s, long   *const val);
+bool  is_reg            (const char *s, char   *const pos);
+bool  is_long_reg       (const char *s, char   *const pos);
 
-void     tag_ctor        (tag *const label);
-void     add_machine_cmd (machine *const cpu, const size_t val_size, void *val_ptr);
-void     read_val        (source *program, src_location *info, const char sep);
-void     skip_spaces     (source *const program, src_location *const info);
-void    *assembler       (source *program, size_t *const cpu_size, tag *const label, const char mark_mode);
+int   read_val          (source *program, src_location *info, const char sep1, const char sep2 = ' ');
+
+void  tag_ctor          (tag *const label);
+void  add_machine_cmd   (machine *const cpu, const size_t val_size, void *val_ptr);
+void  skip_spaces       (source *const program, src_location *const info);
+void *assembler         (source *program, size_t *const cpu_size, tag *const label, const char mark_mode);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -114,7 +117,7 @@ int main(int argc, const char *argv[])
     tag_ctor(&label);
 
     header machine_info = {'G', 'D', 2, 0};
-    assembler(&program, &machine_info.cmd_num, &label, MARK_GET);
+    if (assembler(&program, &machine_info.cmd_num, &label, MARK_GET) == nullptr) return 1;
 
     void *machine_data = assembler(&program, &machine_info.cmd_num, &label, MARK_CHECK);
     *(header *) machine_data = machine_info;
@@ -155,22 +158,24 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label, const
 
     while (info.cur_src_pos < program->src_size)
     {
-        read_val(program, &info, ':');
+        int possible_mark_begin = read_val(program, &info, ':');
         CMD status_cmd = identify_cmd(info.cur_src_cmd);
 
         switch (status_cmd)
         {
             case CMD_NOT_EXICTING:
-                if (!get_mark(program, &info, &cpu, label, mark_mode))
+            {
+                int cmd_beg_line = info.cur_src_line;
+
+                if (!get_mark(program, &info, &cpu, label, possible_mark_begin, mark_mode))
                 {
                     error = true;
-                    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "command \"%s\" is not existing\n", info.cur_src_line, info.cur_src_cmd);
-                    break;
+                    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "command \"%s\" is not existing\n", cmd_beg_line, info.cur_src_cmd);
                 }
                 break;
-            
+            }
             case CMD_PUSH:
-                if (!cmd_push(program, &info, &cpu)) error = true;
+                if (!read_push_pop_arg(program, &info, &cpu, CMD_PUSH)) error = true;
                 break;
 
             case CMD_POP:
@@ -185,50 +190,51 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label, const
                 add_machine_cmd(&cpu, sizeof(char), &status_cmd);
                 break;
         }
-
         skip_spaces(program, &info);
     }
 
     free(info.cur_src_cmd);
-    if (mark_mode == MARK_GET)
-    {
-        free(cpu.machine_code);
-        return nullptr;
-    }
     if (error) return nullptr;
 
     *cpu_size = cpu.machine_pos - sizeof(header); //only machine commands (without header)
+
     return cpu.machine_code;
 }
 
 /**
-*   @brief Reads another command or argument from source and puts it in the array "info->cur_src_cmd".
+*   @brief Reads another command or argument from source and puts it in the array "info->cur_src_cmd". Skips all spaces before and after command.
 *
 *   @param program [in]  - pointer   to the structure with information about source
 *   @param info    [out] - pointer   to the structure with information abour location in source
-*   @param sep     [in]  - character to stop reading after meeting it 
+*   @param sep1    [in]  -         character to stop reading after meeting it
+*   @param sep2    [in]  - another character to stop reading after meeting it
 *   
-*   @return nothing
+*   @return  index of the first character of the command in the "program->src_code"
 *
 *   @note reading also stops after meeting a space-character
 */
 
-void read_val(source *program, src_location *info, const char sep)
+int read_val(source *program, src_location *info, const char sep1, const char sep2)
 {
     assert(program != nullptr);
     assert(info    != nullptr);
 
+    skip_spaces(program, info);
+    
+    int ans = info->cur_src_pos;
     int cur_char = 0;
     int cmd_counter = 0;
 
     while (info->cur_src_pos < program->src_size &&
-           !isspace(cur_char = program->src_code[info->cur_src_pos]) && cur_char != sep)
+           !isspace(cur_char = program->src_code[info->cur_src_pos]) && cur_char != sep1 && cur_char != sep2)
     {
         info->cur_src_cmd[cmd_counter++] = cur_char;
         info->cur_src_pos++;
     }
     
     info->cur_src_cmd[cmd_counter] = '\0';
+
+    return ans;
 }
 
 /**
@@ -259,8 +265,7 @@ CMD identify_cmd(const char *cmd)
 }
 
 /**
-*   @brief Reads push-arguments. Checks if they are valid. There is not more than one "double" argument and one "register_name" argument.
-*   @brief Adds commands and arguments in "cpu->machine.code".
+*   @brief Reads pop-arguments. Checks if they are valid. Adds commands and arguments in "cpu->machine.code".
 *
 *   @param program [in]  - pointer to the structure with information about source
 *   @param info    [in]  - pointer to the structure with information abour location in source
@@ -269,30 +274,178 @@ CMD identify_cmd(const char *cmd)
 *   @return true if arguments are correct and false else
 */
 
-bool cmd_push(source *const program, src_location *const info, machine *const cpu)
+bool cmd_pop(source *const program, src_location *const info, machine *const cpu)
 {
     assert(program != nullptr);
     assert(info    != nullptr);
     assert(cpu     != nullptr);
 
-    unsigned char cmd = CMD_PUSH;
+    unsigned char cmd = CMD_POP;
+    skip_spaces(program, info);
+
+    if (program->src_code[info->cur_src_pos] == '[') return read_push_pop_arg(program, info, cpu, CMD_POP);
+
+    char reg_arg = 0;
+    read_val(program, info, ' ');
+    if (!strcmp(info->cur_src_cmd, "void"))
+    {
+        cmd = cmd | CMD_NUM_ARG;
+        add_machine_cmd(cpu, sizeof(char), &cmd);
+        
+        return true;
+    }
+    else if (is_reg(info->cur_src_cmd, &reg_arg) || is_long_reg(info->cur_src_cmd, &reg_arg))
+    {
+        cmd = cmd | CMD_REG_ARG;
+        add_machine_cmd(cpu, sizeof(char), &cmd);
+        add_machine_cmd(cpu, sizeof(char), &reg_arg);
+
+        return true;
+    }
+
+    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid pop-argument\n", info->cur_src_line, info->cur_src_cmd);
+    return false;
+}
+
+#define MEM_SYNTAX_CHECK                                                                                                        \
+        if  (cmd & CMD_MEM_ARG)                                                                                                 \
+        {                                                                                                                       \
+            if (info->cur_src_pos < program->src_size && program->src_code[info->cur_src_pos] == ']') ++info->cur_src_pos;      \
+            else                                                                                                                \
+            {                                                                                                                   \
+                fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "there is no \']\' character\n", info->cur_src_line);         \
+                return false;                                                                                                   \
+            }                                                                                                                   \
+        }
+
+/**
+*   @brief Reads push and pop arguments. Checks if they are valid. There is not more than one "double" argument and one "register_name" argument.
+*   @brief Adds commands and arguments in "cpu->machine.code".
+*
+*   @param program [in]  - pointer to the structure with information about source
+*   @param info    [in]  - pointer to the structure with information abour location in source
+*   @param cpu     [out] - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
+*   @param cmd     [in]  - value equal to CMD_POP to read pop-arguments and CMD_PUSH to read push-arguments
+*
+*   @return true if arguments are correct and false else
+*/
+
+bool read_push_pop_arg(source *const program, src_location *const info, machine *const cpu, unsigned char cmd)
+{
+    assert(program != nullptr);
+    assert(info    != nullptr);
+    assert(cpu     != nullptr);
+
+    assert(cmd == CMD_POP || cmd == CMD_PUSH);
 
     skip_spaces(program, info);
-    read_val   (program, info, '+');
+    if (program->src_code[info->cur_src_pos] == '[')
+    {
+        cmd = cmd | CMD_MEM_ARG;
+        ++info->cur_src_pos;
+
+        read_val(program, info, '+', ']');
+        //------------
+        //fprintf(stderr, "arg = %s\n", info->cur_src_cmd);
+        //------------
+        long long_arg = 0;
+        char long_reg = 0;
+        if (is_long(info->cur_src_cmd, &long_arg))
+        {
+            //------------------
+            //fprintf(stderr, "arg = \"%s\" is long\n", info->cur_src_cmd);
+            //------------------
+            cmd = cmd | CMD_NUM_ARG;
+            skip_spaces(program, info);
+
+            if (info->cur_src_pos < program->src_size && program->src_code[info->cur_src_pos] == '+')
+            {
+                ++info->cur_src_pos;
+                read_val(program, info, ']');
+
+                if (is_long_reg(info->cur_src_cmd, &long_reg))
+                {
+                    MEM_SYNTAX_CHECK
+                    cmd = cmd | CMD_REG_ARG;
+
+                    add_machine_cmd(cpu, sizeof(char), &cmd);
+                    add_machine_cmd(cpu, sizeof(char), &long_reg);
+                    add_machine_cmd(cpu, sizeof(long), &long_arg);
+
+                    return true;
+                }
+                else
+                {
+                    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a long-type register name\n", info->cur_src_line, info->cur_src_cmd);
+                    return false;
+                }
+            } //if only long arg
+            else
+            {
+                MEM_SYNTAX_CHECK
+                
+                add_machine_cmd(cpu, sizeof(char), &cmd);
+                add_machine_cmd(cpu, sizeof(long), &long_arg);
+
+                return true;
+            }
+        } //if first argument is not long
+        else if (is_long_reg(info->cur_src_cmd, &long_reg))
+        {
+            cmd = cmd | CMD_REG_ARG;
+            skip_spaces(program, info);
+
+            if (info->cur_src_pos < program->src_size && program->src_code[info->cur_src_pos] == '+')
+            {
+                ++info->cur_src_pos;
+                read_val(program, info, ']');
+
+                if (is_long(info->cur_src_cmd, &long_arg))
+                {
+                    MEM_SYNTAX_CHECK
+                    cmd = cmd | CMD_NUM_ARG;
+
+                    add_machine_cmd(cpu, sizeof(char), &cmd);
+                    add_machine_cmd(cpu, sizeof(char), &long_reg);
+                    add_machine_cmd(cpu, sizeof(long), &long_arg);
+
+                    return true;
+                }
+                else
+                {
+                    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid long\n", info->cur_src_line, info->cur_src_cmd);
+                    return false;
+                }
+            } //if only register arg
+            else
+            {
+                MEM_SYNTAX_CHECK
+
+                add_machine_cmd(cpu, sizeof(char), &cmd);
+                add_machine_cmd(cpu, sizeof(char), &long_reg);
+
+                return true;
+            }
+        } //if invalid arguments
+        fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid RAM-argument\n", info->cur_src_line, info->cur_src_cmd);
+        return false;
+    } //if not MEM arguments
+
+    read_val(program, info, '+', ']');
 
     double dbl_arg = 0;
     char   reg_arg = 0;
     if (is_double(info->cur_src_cmd, &dbl_arg))
     {
         cmd = cmd | CMD_NUM_ARG;
-        
         skip_spaces(program, info);
+
         if (info->cur_src_pos < program->src_size && program->src_code[info->cur_src_pos] == '+')
         {
             ++info->cur_src_pos;
-            read_val(program, info, ' ');
+            read_val(program, info, ']');
 
-            if (is_reg(info->cur_src_cmd, &reg_arg))
+            if (is_reg(info->cur_src_cmd, &reg_arg) || is_long_reg(info->cur_src_cmd, &reg_arg))
             {
                 cmd = cmd | CMD_REG_ARG;
 
@@ -316,15 +469,15 @@ bool cmd_push(source *const program, src_location *const info, machine *const cp
             return true;
         }
     } //if first argument is not "double"
-    else if (is_reg(info->cur_src_cmd, &reg_arg))
+    else if (is_reg(info->cur_src_cmd, &reg_arg) || is_long_reg(info->cur_src_cmd, &reg_arg))
     {
         cmd = cmd | CMD_REG_ARG;
-
         skip_spaces(program, info);
+
         if (info->cur_src_pos < program->src_size && program->src_code[info->cur_src_pos] == '+')
         {
             ++info->cur_src_pos;
-            read_val(program, info, ' ');
+            read_val(program, info, ']');
 
             if (is_double(info->cur_src_cmd, &dbl_arg))
             {
@@ -350,52 +503,9 @@ bool cmd_push(source *const program, src_location *const info, machine *const cp
             return true;
         }
     } //if invalid arguments
-    
-    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid push-argument\n", info->cur_src_line, info->cur_src_cmd);
+    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid argument\n", info->cur_src_line, info->cur_src_cmd);
     return false;
-}
-
-/**
-*   @brief Reads pop-arguments. Checks if they are valid. Adds commands and arguments in "cpu->machine.code".
-*
-*   @param program [in]  - pointer to the structure with information about source
-*   @param info    [in]  - pointer to the structure with information abour location in source
-*   @param cpu     [out] - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
-*
-*   @return true if arguments are correct and false else
-*/
-
-bool cmd_pop(source *const program, src_location *const info, machine *const cpu)
-{
-    assert(program != nullptr);
-    assert(info    != nullptr);
-    assert(cpu     != nullptr);
-
-    unsigned char cmd = CMD_POP;
-
-    skip_spaces(program, info);
-    read_val   (program, info, ' ');
-
-    char reg_arg = 0;
-    if (!strcmp(info->cur_src_cmd, "void"))
-    {
-        cmd = cmd | CMD_NUM_ARG;
-        add_machine_cmd(cpu, sizeof(char), &cmd);
-        
-        return true;
-    }
-    else if (is_reg(info->cur_src_cmd, &reg_arg))
-    {
-        cmd = cmd | CMD_REG_ARG;
-        add_machine_cmd(cpu, sizeof(char), &cmd);
-        add_machine_cmd(cpu, sizeof(char), &reg_arg);
-
-        return true;
-    }
-
-    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid pop-argument\n", info->cur_src_line, info->cur_src_cmd);
-    return false;
-}
+}   
 
 /**
 *   @brief Reads jmp-arguments. Works in two modes.
@@ -405,7 +515,7 @@ bool cmd_pop(source *const program, src_location *const info, machine *const cpu
 *   @param program   [in]      - pointer to the structure with information about source
 *   @param info      [in]      - pointer to the structure with information abour location in source
 *   @param cpu       [out]     - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
-8   @param label     [in][out] - pointer to the store of marks
+*   @param label     [in][out] - pointer to the store of marks
 *   @param mark_mode [in]      - mode of the function
 *
 *   @return in MARK_CHECK-mode in case of non-existent mark returns false and true else
@@ -422,7 +532,6 @@ bool cmd_jmp(source *const program, src_location *const info, machine *const cpu
 
     unsigned char cmd = CMD_JMP;
 
-    skip_spaces(program, info);
     read_val   (program, info, ' ');
 
     int  label_pos = 0;
@@ -451,16 +560,17 @@ bool cmd_jmp(source *const program, src_location *const info, machine *const cpu
 *   @brief In MARK_GET-mode it determines if another string is a mark declaration or not. In the first case it puts the mark in "label".
 *   @brief In MARK_CHECK-mode it immediately returns.
 *
-*   @param program   [in]      - pointer to the structure with information about source
-*   @param info      [in]      - pointer to the structure with information abour location in source
-*   @param cpu       [out]     - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
-*   @param label     [in][out] - pointer to the store of marks
-*   @param mark_mode [in]      - mode of the function
+*   @param program          [in]      - pointer to the structure with information about source
+*   @param info             [in]      - pointer to the structure with information abour location in source
+*   @param cpu              [out]     - pointer to the struct "machine" to add the command and arguments in "cpu->machine_code"
+*   @param label            [in][out] - pointer to the store of marks
+*   @param possible_mrk_beg [in]      - index   of the beginning of possible mark 
+*   @param mark_mode        [in]      - mode of the function
 *
-*   @return in MARK_GET-mode in case of invalid mark(already declareted mark or string with no ':' character in the end) false and true else
+*   @return in MARK_GET-mode in case of invalid mark(already declareted mark or string with no ':' character in the end) returns false and true else
 */
 
-bool get_mark(source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode)
+bool get_mark(source *const program, src_location *const info, machine *const cpu, tag *const label, const int possible_mrk_beg, const char mark_mode)
 {
     assert(program != nullptr);
     assert(info    != nullptr);
@@ -474,25 +584,23 @@ bool get_mark(source *const program, src_location *const info, machine *const cp
         ++info->cur_src_pos;
         return true;
     }
+
+    int cur_line = info->cur_src_line;
+    skip_spaces(program, info);
+    
     if (info->cur_src_pos < program->src_size)
     {
-        int mrk_size              = strlen(info->cur_src_cmd);
-        char *possible_mark_begin = program->src_code + (info->cur_src_pos - mrk_size);
-        skip_spaces(program, info);
-
-        if (program->src_code[info->cur_src_pos] == ':' && tag_push(label, {possible_mark_begin, mrk_size, cpu->machine_pos}))
+        int mrk_size = strlen(info->cur_src_cmd);
+        if (program->src_code[info->cur_src_pos] == ':' && tag_push(label, {program->src_code + possible_mrk_beg, mrk_size, cpu->machine_pos}))
         {
             ++info->cur_src_pos;
-            skip_spaces(program, info);
-
             return true;
         }
         if (program->src_code[info->cur_src_pos] == ':')
         {
-            fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "the mark \"%s\" has already met\n", info->cur_src_line, info->cur_src_cmd);
+            fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "the mark \"%s\" has already met\n", cur_line, info->cur_src_cmd);
+            
             ++info->cur_src_pos;
-            skip_spaces(program, info);
-
             return false;
         }
     }
@@ -540,7 +648,28 @@ bool is_double(const char *s, double *const val)
 }
 
 /**
-*   @brief Checks if "*s" is the rigister name. Puts number of register in "pos".
+*   @brief Checks if "*s" is valid long. Puts the value in "val".
+*
+*   @param s   [in]  - pointer to the first byte of null-terminated byte string to check
+*   @param val [out] - pointer to the "long" variable to put the result
+*
+*   @return true if argument is valid and false else
+*
+*   @note you should ignore "*val" if "is_long()" returns false
+*/
+
+bool is_long(const char *s, long *const val)
+{
+    assert (s != nullptr);
+
+    char *check = nullptr;
+    *val = strtol(s, &check, 10);
+
+    return !(*check) && check != s;
+}
+
+/**
+*   @brief Checks if "*s" is the "double type" rigister name. Puts number of register in "pos".
 *
 *   @param s   [in]  - pointer to the first byte of null-terminated byte string to check
 *   @param pos [out] - pointer to the number of register
@@ -555,7 +684,34 @@ bool is_reg(const char *s, char *const pos)
     assert(s   != nullptr);
     assert(pos != nullptr);
 
-    for (char reg_cnt = 1; reg_cnt <= REG_NUM; ++reg_cnt)
+    for (char reg_cnt = REG_NUM / 2 + 1; reg_cnt <= REG_NUM; ++reg_cnt)
+    {
+        if (!strcmp(s, reg_names[reg_cnt]))
+        {
+            *pos = reg_cnt;
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+*   @brief Checks if "*s" is the name of "long" type rigister. Puts number of register in "pos".
+*
+*   @param s   [in]  - pointer to the first byte of null-terminated byte string to check
+*   @param pos [out] - pointer to the number of register
+*
+*   @return true if "s" - name of "int" type register and false else
+*
+*   @note you should ignore "*pos" if "is_long_reg()" returns false
+*/
+
+bool is_long_reg(const char *s, char *const pos)
+{
+    assert(s   != nullptr);
+    assert(pos != nullptr);
+
+    for (char reg_cnt = 1; reg_cnt <= REG_NUM / 2; ++reg_cnt)
     {
         if (!strcmp(s, reg_names[reg_cnt]))
         {
