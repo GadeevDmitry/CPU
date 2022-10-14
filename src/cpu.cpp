@@ -70,17 +70,19 @@ enum ERRORS
     EMPTY_STACK   ,
     EMPTY_CALLS   ,
     UNDEFINED_CMD ,
-    MEMORY_LIMIT
+    MEMORY_LIMIT  ,
+    NEG_VALUE
 };
 
 const char *error_messages[] = 
 {
-    "./CPU IS OK"           ,
-    "DIVISION BY ZERO"      ,
-    "STACK IS EMPTY"        ,
-    "CALLS STACK IS EMPTY"  ,
-    "UNDEFINED COMMAND"     ,
-    "MEMORY LIMIT EXCEEDED"
+    "./CPU IS OK"            ,
+    "DIVISION BY ZERO"       ,
+    "STACK IS EMPTY"         ,
+    "CALLS STACK IS EMPTY"   ,
+    "UNDEFINED COMMAND"      ,
+    "MEMORY LIMIT EXCEEDED"  ,
+    "SQRT OF NEGATIVE VALUE"
 };
 
 
@@ -180,6 +182,13 @@ int main(int argc, char *argv[])
 #define RETURN()                                                                    \
         EMPTY_CALLS()                                                               \
         progress->execution.machine_pos = *(int *) stack_front(&progress->calls);
+
+#define NEG_CHECK(val)                                                              \
+        if (!approx_equal(val, 0) && val < 0)                                       \
+        {                                                                           \
+            output_error(NEG_VALUE);                                                \
+            return false;                                                           \
+        }
 
 /**
 *   @brief Manages of program executing by reading commands from "progress->execution.machine_code" and calling functions to execute them.

@@ -40,7 +40,8 @@ DEF_CMD(OUT, 6,
     PRINT(a)
 })
 
-DEF_CMD(NOT_EXICTING, 7, {
+DEF_CMD(NOT_EXICTING, 7,
+{
     return true;
 })
 
@@ -55,12 +56,14 @@ DEF_CMD(POP, 8,
     }
 })
 
-DEF_CMD(CALL, 9, {
+DEF_CMD(CALL, 9,
+{
     ADD_POINT()
     cmd_jmp(progress);
 })
 
-DEF_CMD(RET, 10, {
+DEF_CMD(RET, 10,
+{
     RETURN()
     DEL_POINT()
 })
@@ -70,8 +73,17 @@ DEF_CMD(JMP, 11,
     cmd_jmp(progress);
 })
 
-DEF_JMP_CMD(JA , 12, >)
-DEF_JMP_CMD(JAE, 13, >=)
+DEF_CMD(SQRT, 12,
+{
+    GET_STK_ONE()
+    POP()
+    NEG_CHECK(a)
+    a = sqrt(a);
+    PUSH(a)
+})
+
+DEF_JMP_CMD(JA , 13, >)
+DEF_JMP_CMD(JAE, 14, >=)
 DEF_JMP_CMD(JB , 15, <)
 DEF_JMP_CMD(JBE, 16, <=)
 DEF_JMP_CMD(JE , 17, ==)
