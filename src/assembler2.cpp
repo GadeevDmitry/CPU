@@ -68,14 +68,14 @@ const int REG_NUM = 8;
 const char *reg_names[] = 
 {
     "empty",
-    "rax"  ,
-    "rbx"  ,
-    "rcx"  ,
-    "rdx"  ,
     "rex"  ,
     "rfx"  ,
     "rgx"  ,
-    "rhx"
+    "rhx"  ,
+    "rax"  ,
+    "rbx"  ,
+    "rcx"  ,
+    "rdx"
 };
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/

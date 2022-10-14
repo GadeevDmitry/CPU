@@ -211,9 +211,6 @@ bool execution(cpu_store *progress)
         #define DEF_CMD(name, number, code)                                 \
                 case CMD_##name:                                            \
                 code                                                        \
-                /*fprintf(stderr, "cmd = "#name"\n");*/                     \
-                /*fprintf(stderr, "rax = %ld\n", progress->long_regs[1]);*/ \
-                /*fprintf(stderr, "rbx = %ld\n", progress->long_regs[2]);*/ \
                 break;
 
         #define DEF_JMP_CMD(name, number, cmp)                              \
@@ -300,19 +297,13 @@ ERRORS cmd_push(cpu_store *progress)
 
 ERRORS cmd_pop(cpu_store *progress)
 {
-    //fprintf(stderr, "POP\n");
     assert(progress != nullptr);
 
     if (stack_empty(&progress->stk)) return EMPTY_STACK;
 
     --progress->execution.machine_pos;
     unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
-
-    if (cmd & CMD_NUM_ARG)
-    {
-        stack_pop(&progress->stk);
-        return OK;
-    }
+    
     if (cmd & CMD_MEM_ARG)
     {
         long ram_index = get_memory_val(progress, cmd);
@@ -333,6 +324,12 @@ ERRORS cmd_pop(cpu_store *progress)
             reg_pos -= 5; //5 - number of long-type registers
             progress->regs[reg_pos] = *(stack_el *) stack_front(&progress->stk);
         }
+        stack_pop(&progress->stk);
+
+        return OK;
+    }
+    if (cmd & CMD_NUM_ARG)
+    {
         stack_pop(&progress->stk);
     }
     return OK;
@@ -374,7 +371,7 @@ stack_el get_reg_val(cpu_store *const progress, const char reg_num)
     assert(progress != nullptr);
 
     if (reg_num <= REG_NUM / 2) return progress->long_regs[reg_num];
-    return progress->long_regs[reg_num - 5];
+    return progress->regs[reg_num - 5];
 }
 
 /**
