@@ -55,15 +55,24 @@ DEF_CMD(POP, 8,
     }
 })
 
+DEF_CMD(CALL, 9, {
+    ADD_POINT()
+    cmd_jmp(progress);
+})
 
-DEF_CMD(JMP, 9,
+DEF_CMD(RET, 10, {
+    RETURN()
+    DEL_POINT()
+})
+
+DEF_CMD(JMP, 11,
 {
     cmd_jmp(progress);
 })
 
-DEF_JMP_CMD(JA , 10, >)
-DEF_JMP_CMD(JAE, 11, >=)
-DEF_JMP_CMD(JB , 12, <)
-DEF_JMP_CMD(JBE, 13, <=)
-DEF_JMP_CMD(JE , 14, ==)
-DEF_JMP_CMD(JNE, 15, !=)
+DEF_JMP_CMD(JA , 12, >)
+DEF_JMP_CMD(JAE, 13, >=)
+DEF_JMP_CMD(JB , 15, <)
+DEF_JMP_CMD(JBE, 16, <=)
+DEF_JMP_CMD(JE , 17, ==)
+DEF_JMP_CMD(JNE, 18, !=)

@@ -55,6 +55,7 @@ struct cpu_store
 
     char version;
 
+    stack calls;
     stack stk;
     stack_el  ram [RAM_NUM];
     stack_el  regs[REG_NUM / 2];
@@ -67,6 +68,7 @@ enum ERRORS
     OK            ,
     ZERO_DIVISION ,
     EMPTY_STACK   ,
+    EMPTY_CALLS   ,
     UNDEFINED_CMD ,
     MEMORY_LIMIT
 };
@@ -76,6 +78,7 @@ const char *error_messages[] =
     "./CPU IS OK"           ,
     "DIVISION BY ZERO"      ,
     "STACK IS EMPTY"        ,
+    "CALLS STACK IS EMPTY"  ,
     "UNDEFINED COMMAND"     ,
     "MEMORY LIMIT EXCEEDED"
 };
@@ -104,7 +107,8 @@ stack_el get_stack_el_val (cpu_store *progress, const unsigned char cmd);
 int main(int argc, char *argv[])
 {
     cpu_store progress = {};
-    stack_ctor(&progress.stk, sizeof(stack_el));
+    stack_ctor(&progress.stk  , sizeof(stack_el));
+    stack_ctor(&progress.calls, sizeof(int));
 
     progress.execution.machine_code = read_file(argv[1], &progress.execution_size);
     if (progress.execution.machine_code == nullptr)
@@ -121,42 +125,61 @@ int main(int argc, char *argv[])
     output_error(OK);
 }
 
-#define EMPTY_CHECK()                                                   \
-        if (stack_empty(&progress->stk))                                \
-        {                                                               \
-            output_error(EMPTY_STACK);                                  \
-            return false;                                               \
+#define EMPTY_CHECK()                                                               \
+        if (stack_empty(&progress->stk))                                            \
+        {                                                                           \
+            output_error(EMPTY_STACK);                                              \
+            return false;                                                           \
         }
 
-#define ZERO_CHECK(val)                                                 \
-        if (approx_equal(val, 0))                                       \
-        {                                                               \
-            output_error(ZERO_DIVISION);                                \
-            return false;                                               \
+#define EMPTY_CALLS()                                                               \
+        if (stack_empty(&progress->calls))                                          \
+        {                                                                           \
+            output_error(EMPTY_CALLS);                                              \
+            return false;                                                           \
         }
 
-#define PUSH(val)                                                       \
-        stack_el push_val = val;                                        \
-                                                                        \
+#define ZERO_CHECK(val)                                                             \
+        if (approx_equal(val, 0))                                                   \
+        {                                                                           \
+            output_error(ZERO_DIVISION);                                            \
+            return false;                                                           \
+        }
+
+#define PUSH(val)                                                                   \
+        stack_el push_val = val;                                                    \
+                                                                                    \
         stack_push(&progress->stk, &push_val);
 
-#define POP()                                                           \
-        EMPTY_CHECK()                                                   \
+#define POP()                                                                       \
+        EMPTY_CHECK()                                                               \
         stack_pop(&progress->stk);
 
-#define GET_STK_ONE()                                                   \
-        EMPTY_CHECK()                                                   \
+#define GET_STK_ONE()                                                               \
+        EMPTY_CHECK()                                                               \
         stack_el a = *(stack_el *) stack_front(&progress->stk);
 
-#define GET_STK_TWO()                                                   \
-        GET_STK_ONE()                                                   \
-        POP()                                                           \
-        EMPTY_CHECK()                                                   \
-        stack_el b = *(stack_el *) stack_front(&progress->stk);         \
+#define GET_STK_TWO()                                                               \
+        GET_STK_ONE()                                                               \
+        POP()                                                                       \
+        EMPTY_CHECK()                                                               \
+        stack_el b = *(stack_el *) stack_front(&progress->stk);                     \
         POP()
 
-#define PRINT(val)                                                      \
+#define PRINT(val)                                                                  \
         printf("%lg\n", val);
+
+#define ADD_POINT()                                                                 \
+        int tmp_ret_val = progress->execution.machine_pos + sizeof(int);            \
+        stack_push(&progress->calls, &tmp_ret_val);
+
+#define DEL_POINT()                                                                 \
+        EMPTY_CALLS()                                                               \
+        stack_pop(&progress->calls);
+
+#define RETURN()                                                                    \
+        EMPTY_CALLS()                                                               \
+        progress->execution.machine_pos = *(int *) stack_front(&progress->calls);
 
 /**
 *   @brief Manages of program executing by reading commands from "progress->execution.machine_code" and calling functions to execute them.
@@ -179,6 +202,9 @@ bool execution(cpu_store *progress)
         #define DEF_CMD(name, number, code)                                 \
                 case CMD_##name:                                            \
                 code                                                        \
+                /*fprintf(stderr, "cmd = "#name"\n");*/                     \
+                /*fprintf(stderr, "rax = %ld\n", progress->long_regs[1]);*/ \
+                /*fprintf(stderr, "rbx = %ld\n", progress->long_regs[2]);*/ \
                 break;
 
         #define DEF_JMP_CMD(name, number, cmp)                              \
@@ -273,6 +299,11 @@ ERRORS cmd_pop(cpu_store *progress)
     --progress->execution.machine_pos;
     unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
 
+    if (cmd & CMD_NUM_ARG)
+    {
+        stack_pop(&progress->stk);
+        return OK;
+    }
     if (cmd & CMD_MEM_ARG)
     {
         long ram_index = get_memory_val(progress, cmd);
@@ -293,6 +324,7 @@ ERRORS cmd_pop(cpu_store *progress)
             reg_pos -= 5; //5 - number of long-type registers
             progress->regs[reg_pos] = *(stack_el *) stack_front(&progress->stk);
         }
+        stack_pop(&progress->stk);
     }
     return OK;
 }

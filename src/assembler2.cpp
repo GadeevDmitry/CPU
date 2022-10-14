@@ -176,7 +176,7 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label, const
                 break;
 
             case CMD_JMP: case CMD_JA: case CMD_JAE: case CMD_JB:
-            case CMD_JBE: case CMD_JE: case CMD_JNE:
+            case CMD_JBE: case CMD_JE: case CMD_JNE: case CMD_CALL:
                 if (!cmd_jmp(program, &info, &cpu, label, mark_mode, status_cmd)) error = true;
                 break;
 
