@@ -43,22 +43,20 @@ struct machine
     int   machine_pos;
 };
 
+#define DEF_CMD(name, number, ...)     \
+        CMD_##name = number,
+
+#define DEF_JMP_CMD(name, number, ...) \
+        CMD_##name = number,
 enum CMD
 {
-    CMD_HLT                   , // 0
-    CMD_PUSH                  , // 1
-    CMD_ADD                   , // 2
-    CMD_SUB                   , // 3
-    CMD_MUL                   , // 4
-    CMD_DIV                   , // 5
-    CMD_OUT                   , // 6
-    CMD_NOT_EXICTING          , // 7
-    CMD_POP                   , // 8
-    CMD_JMP                   , // 9
+    #include "cmd.h"
     CMD_NUM_ARG      = 1 << 5 ,
     CMD_REG_ARG      = 1 << 6 ,
-    CMD_MEM_ARG      = 1 << 7
+    CMD_MEM_ARG      = 1 << 7 ,
 };
+#undef DEF_CMD
+#undef DEF_JMP_CMD
 
 enum MARK
 {
@@ -86,7 +84,7 @@ CMD   identify_cmd      (const char *cmd);
 
 bool  read_push_pop_arg (source *const program, src_location *const info, machine *const cpu, unsigned char cmd);
 bool  cmd_pop           (source *const program, src_location *const info, machine *const cpu);
-bool  cmd_jmp           (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode);
+bool  cmd_jmp           (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode, unsigned char cmd);
 bool  get_mark          (source *const program, src_location *const info, machine *const cpu, tag *const label, int possible_mrk_beg, const char mark_mode);
 bool  is_double         (const char *s, double *const val);
 bool  is_long           (const char *s, long   *const val);
@@ -124,10 +122,12 @@ int main(int argc, const char *argv[])
 
     if (write_file(argv[2], machine_data, machine_info.cmd_num + sizeof(header)) == false)
     {
+        free(machine_data);
         fprintf(stderr, RED "ERROR: " CANCEL "Can't open the file to write the machine code in\n");
         return 1;
     }
 
+    free(machine_data);
     fprintf(stderr, GREEN "./ASM2 IS OK\n" CANCEL);
     return 0;
 }
@@ -164,16 +164,9 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label, const
         switch (status_cmd)
         {
             case CMD_NOT_EXICTING:
-            {
-                int cmd_beg_line = info.cur_src_line;
-
-                if (!get_mark(program, &info, &cpu, label, possible_mark_begin, mark_mode))
-                {
-                    error = true;
-                    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "command \"%s\" is not existing\n", cmd_beg_line, info.cur_src_cmd);
-                }
+                if (!get_mark(program, &info, &cpu, label, possible_mark_begin, mark_mode)) error = true;
                 break;
-            }
+
             case CMD_PUSH:
                 if (!read_push_pop_arg(program, &info, &cpu, CMD_PUSH)) error = true;
                 break;
@@ -182,8 +175,9 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label, const
                 if (!cmd_pop(program, &info, &cpu)) error = true;
                 break;
 
-            case CMD_JMP:
-                if (!cmd_jmp(program, &info, &cpu, label, mark_mode)) error = true;
+            case CMD_JMP: case CMD_JA: case CMD_JAE: case CMD_JB:
+            case CMD_JBE: case CMD_JE: case CMD_JNE:
+                if (!cmd_jmp(program, &info, &cpu, label, mark_mode, status_cmd)) error = true;
                 break;
 
             default:
@@ -251,15 +245,15 @@ CMD identify_cmd(const char *cmd)
 {
     assert(cmd != nullptr);
 
-    if (strcasecmp(cmd, "HLT" ) == 0) return CMD_HLT ;
-    if (strcasecmp(cmd, "PUSH") == 0) return CMD_PUSH;
-    if (strcasecmp(cmd, "ADD" ) == 0) return CMD_ADD ;
-    if (strcasecmp(cmd, "SUB" ) == 0) return CMD_SUB ;
-    if (strcasecmp(cmd, "MUL" ) == 0) return CMD_MUL ;
-    if (strcasecmp(cmd, "DIV" ) == 0) return CMD_DIV ;
-    if (strcasecmp(cmd, "OUT" ) == 0) return CMD_OUT ;
-    if (strcasecmp(cmd, "POP" ) == 0) return CMD_POP ;
-    if (strcasecmp(cmd, "JMP" ) == 0) return CMD_JMP ;
+    #define DEF_CMD(name, ...)                              \
+            if (!strcasecmp(cmd, #name)) return CMD_##name;
+    
+    #define DEF_JMP_CMD(name, ...)                          \
+            if (!strcasecmp(cmd, #name)) return CMD_##name;
+
+    #include "cmd.h"
+    #undef DEF_CMD
+    #undef DEF_JMP_CMD
 
     return CMD_NOT_EXICTING;
 }
@@ -521,7 +515,7 @@ bool read_push_pop_arg(source *const program, src_location *const info, machine 
 *   @return in MARK_CHECK-mode in case of non-existent mark returns false and true else
 */
 
-bool cmd_jmp(source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode)
+bool cmd_jmp(source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode, unsigned char cmd)
 {
     assert(program != nullptr);
     assert(info    != nullptr);
@@ -530,9 +524,7 @@ bool cmd_jmp(source *const program, src_location *const info, machine *const cpu
 
     assert(mark_mode == 0 || mark_mode == 1);
 
-    unsigned char cmd = CMD_JMP;
-
-    read_val   (program, info, ' ');
+    read_val(program, info, ' ');
 
     int  label_pos = 0;
     if ((label_pos = tag_string_find(label, info->cur_src_cmd)) != -1)
@@ -604,6 +596,8 @@ bool get_mark(source *const program, src_location *const info, machine *const cp
             return false;
         }
     }
+
+    fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "command \"%s\" is not existing\n", cur_line, info->cur_src_cmd);
     return false;
 }
 

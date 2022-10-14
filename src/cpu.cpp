@@ -34,22 +34,19 @@ struct machine
 const int REG_NUM = 8;
 const int RAM_NUM = 10000;
 
+#define DEF_CMD(name, number, code)      \
+        CMD_##name = number,
+#define DEF_JMP_CMD(name, number, code)  \
+        CMD_##name = number,
 enum CMD
 {
-    CMD_HLT                   , // 0
-    CMD_PUSH                  , // 1
-    CMD_ADD                   , // 2
-    CMD_SUB                   , // 3
-    CMD_MUL                   , // 4
-    CMD_DIV                   , // 5
-    CMD_OUT                   , // 6
-    CMD_NOT_EXICTING          , // 7
-    CMD_POP                   , // 8
-    CMD_JMP                   , // 9
+    #include "cmd.h"
     CMD_NUM_ARG      = 1 << 5 ,
     CMD_REG_ARG      = 1 << 6 ,
-    CMD_MEM_ARG      = 1 << 7
+    CMD_MEM_ARG      = 1 << 7 ,
 };
+#undef DEF_CMD
+#undef DEF_JMP_CMD
 
 struct cpu_store
 {
@@ -126,12 +123,42 @@ int main(int argc, char *argv[])
     output_error(OK);
 }
 
-#define err_check(status)                       \
-        if (status != OK)                       \
-        {                                       \
-            output_error(status);               \
-            return false;                       \
+#define EMPTY_CHECK()                                                   \
+        if (stack_empty(&progress->stk))                                \
+        {                                                               \
+            output_error(EMPTY_STACK);                                  \
+            return false;                                               \
         }
+
+#define ZERO_CHECK(val)                                                 \
+        if (approx_equal(val, 0))                                       \
+        {                                                               \
+            output_error(ZERO_DIVISION);                                \
+            return false;                                               \
+        }
+
+#define PUSH(val)                                                       \
+        stack_el push_val = val;                                        \
+                                                                        \
+        stack_push(&progress->stk, &push_val);
+
+#define POP()                                                           \
+        EMPTY_CHECK()                                                   \
+        stack_pop(&progress->stk);
+
+#define GET_STK_ONE()                                                   \
+        EMPTY_CHECK()                                                   \
+        stack_el a = *(stack_el *) stack_front(&progress->stk);
+
+#define GET_STK_TWO()                                                   \
+        GET_STK_ONE()                                                   \
+        POP()                                                           \
+        EMPTY_CHECK()                                                   \
+        stack_el b = *(stack_el *) stack_front(&progress->stk);         \
+        POP()
+
+#define PRINT(val)                                                      \
+        printf("%lg\n", val);
 
 /**
 *   @brief Manages of program executing by reading commands from "progress->execution.machine_code" and calling functions to execute them.
@@ -151,38 +178,29 @@ bool execution(cpu_store *progress)
     {
         unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
 
-        ERRORS status = OK;
+        #define DEF_CMD(name, number, code)                                 \
+                case CMD_##name:                                            \
+                code                                                        \
+                break;
+
+        #define DEF_JMP_CMD(name, number, cmp)                              \
+                case CMD_##name:                                            \
+                {                                                           \
+                    GET_STK_TWO()                                           \
+                    if (b cmp a) cmd_jmp(progress);                         \
+                    else progress->execution.machine_pos += sizeof(int);    \
+                    break;                                                  \
+                }
+                
         switch ((cmd & mask01))
         {
-            case CMD_HLT : /*fprintf(stderr, "HLT\n");*/ return true;
-
-            case CMD_PUSH:
-                cmd_push(progress);
-                break;
-            
-            case CMD_POP:
-                status = cmd_pop(progress);
-                err_check(status);
-                break;
-
-            case CMD_JMP:
-                status = cmd_jmp(progress);
-                break;
-
-            case CMD_ADD: case CMD_SUB: case CMD_MUL: case CMD_DIV:
-                status = cmd_arithmetic(progress, cmd);
-                err_check(status);
-                break;
-
-            case CMD_OUT:
-                status = cmd_out(progress);
-                err_check(status);
-                break;
-
+            #include "cmd.h"
             default:
                 output_error(UNDEFINED_CMD);
                 return false;
         }
+        #undef DEF_CMD
+        #undef DEF_JMP_CMD
     }
 
     return true;
