@@ -87,8 +87,6 @@ bool     check_signature  (cpu_store *progress);
 bool     execution        (cpu_store *progress);
 bool     approx_equal     (double a, double b);
 
-ERRORS   cmd_arithmetic   (cpu_store *progress, unsigned char mode);
-ERRORS   cmd_out          (cpu_store *progress);
 ERRORS   cmd_push         (cpu_store *progress);
 ERRORS   cmd_pop          (cpu_store *progress);
 ERRORS   cmd_jmp          (cpu_store *progress);
@@ -223,78 +221,6 @@ void *get_machine_cmd(cpu_store *const progress, const size_t val_size)
     progress->execution.machine_pos += val_size;
 
     return cmd;
-}
-
-/**
-*   @brief Executes arithmetic commands.
-*
-*   @param progress [in] - "cpu_store" contains all information about program
-*   @param mode     [in] - mode encodes the arithmetic operation
-*
-*   @return enum "ERRORS" error value
-*/
-
-ERRORS cmd_arithmetic(cpu_store *progress, unsigned char mode)
-{
-    assert(progress != nullptr);
-
-    stack_el var_1 = 0;
-    stack_el var_2 = 0;
-
-    if (stack_empty(&progress->stk)) return EMPTY_STACK;
-    var_1 = *(stack_el *) stack_pop(&progress->stk);
-
-    if (stack_empty(&progress->stk)) return EMPTY_STACK;
-    var_2 = *(stack_el *) stack_pop(&progress->stk);
-    
-    stack_el ans = 0;
-    switch (mode)
-    {
-        case CMD_ADD:
-            //fprintf(stderr, "ADD\n");
-            ans = var_1 + var_2;
-            break;
-        case CMD_SUB:
-            //fprintf(stderr, "SUB\n");
-            ans = var_2 - var_1;
-            break;
-        case CMD_MUL:
-            //fprintf(stderr, "MUL\n");
-            ans = var_1 * var_2;
-            break;
-        case CMD_DIV:
-            //fprintf(stderr, "DIV\n");
-            if (approx_equal(var_1, 0)) return ZERO_DIVISION;
-            ans = var_2 / var_1;
-            break;
-        default:
-            return UNDEFINED_CMD;
-    }
-
-
-    stack_push(&progress->stk, &ans);
-    return OK;
-}
-
-/**
-*   @brief Executes "out" command.
-*
-*   @param progress [in] - "cpu_store" contains all information about program
-*
-*   @return enum "ERRORS" error value
-*/
-
-ERRORS cmd_out(cpu_store *progress)
-{
-    //fprintf(stderr, "OUT\n");
-    assert(progress != nullptr);
-
-    if (stack_empty(&progress->stk)) return EMPTY_STACK;
-
-    stack_el var = *(stack_el *) stack_front(&progress->stk);
-    printf("%lg\n", var);
-
-    return OK;
 }
 
 /**
