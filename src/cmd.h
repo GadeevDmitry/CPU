@@ -37,6 +37,7 @@ DEF_CMD(DIV, 5,
 DEF_CMD(OUT, 6,
 {
     GET_STK_ONE()
+    POP()
     PRINT(a)
 })
 

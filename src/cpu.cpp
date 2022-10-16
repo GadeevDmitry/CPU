@@ -90,7 +90,8 @@ const char *error_messages[] =
 
 bool     check_signature  (cpu_store *progress);
 bool     execution        (cpu_store *progress);
-bool     approx_equal     (double a, double b);
+bool     approx_equal     (const double a,   const double b);
+bool     approx_cmp       (const stack_el a, const stack_el b, char *type);
 
 ERRORS   cmd_push         (cpu_store *progress);
 ERRORS   cmd_pop          (cpu_store *progress);
@@ -217,7 +218,7 @@ bool execution(cpu_store *progress)
                 case CMD_##name:                                            \
                 {                                                           \
                     GET_STK_TWO()                                           \
-                    if (b cmp a) cmd_jmp(progress);                         \
+                    if (approx_cmp(b, a, #cmp)) cmd_jmp(progress);          \
                     else progress->execution.machine_pos += sizeof(int);    \
                     break;                                                  \
                 }
@@ -447,6 +448,22 @@ void output_error(ERRORS status)
     fprintf(stderr, RED "ERROR: " CANCEL "%s\n", error_messages[status]);
 }
 
+bool approx_cmp(const stack_el a, const stack_el b, char *type)
+{
+    assert (type != nullptr);
+
+    bool is_equal = approx_equal(a, b);
+
+    if (!strcmp(type, ">")) return !is_equal && a > b;
+    if (!strcmp(type, ">=")) return is_equal || a > b;
+    if (!strcmp(type, "<")) return !is_equal && a < b;
+    if (!strcmp(type, "<=")) return is_equal || a < b;
+    if (!strcmp(type, "==")) return is_equal;
+    if (!strcmp(type, "!=")) return !is_equal;
+
+    return false;
+}
+
 /**
 *   @brief Compare two double numbers with error rate DELTA.
 *
@@ -456,7 +473,7 @@ void output_error(ERRORS status)
 *   @return true if numbers are approximately equal and false else
 */
 
-bool approx_equal(double a, double b)
+bool approx_equal(const double a, const double b)
 {
     return fabs(a - b) < DELTA;
 }
