@@ -7,7 +7,6 @@ call fact
 
 push rax
 out
-pop void
 
 hlt
 

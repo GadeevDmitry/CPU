@@ -1,6 +1,7 @@
 DEF_CMD(HLT, 0,
 {
-    return true;
+    is_hlt = true;
+    break;
 })
 
 DEF_CMD(PUSH, 1,
@@ -55,6 +56,7 @@ DEF_CMD(POP, 8,
         output_error(status);
         return false;
     }
+    DRAW_RAM();
 })
 
 DEF_CMD(CALL, 9,

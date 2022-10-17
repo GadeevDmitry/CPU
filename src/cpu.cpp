@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include <string.h>
+#include <SFML/Graphics.hpp>
 
 #define RED    "\e[1;31m"
 #define CANCEL "\e[0m"
@@ -33,6 +34,7 @@ struct machine
 
 const int REG_NUM = 8;
 const int RAM_NUM = 10000;
+const int RAM_STR = 100;
 
 #define DEF_CMD(name, number, code)      \
         CMD_##name = number,
@@ -191,6 +193,47 @@ int main(int argc, char *argv[])
             return false;                                                           \
         }
 
+#define DRAW_RAM()                                                                  \
+                                                                                    \
+    /* for (int i = 0; i <= 10; ++i)                                                \
+    {                                                                               \
+        fprintf(stderr, "%lg ", progress->ram[i]);                                  \
+    }                                                                               \
+    fprintf(stderr, "\n");*/                                                        \
+                                                                                    \
+    const int  wnd_size = 500;                                                      \
+    const int cell_size = 5;                                                        \
+    sf::Uint32 pixels[wnd_size][wnd_size] = {};                                     \
+                                                                                    \
+    for (int RAM_cnt = 0; RAM_cnt < RAM_NUM; ++RAM_cnt)                             \
+    {                                                                               \
+        if (!approx_equal(progress->ram[RAM_cnt], 0))                               \
+        {                                                                           \
+            int y0 = cell_size * (RAM_cnt / RAM_STR) + 1;                           \
+            int x0 = cell_size * (RAM_cnt % RAM_STR) + 1;                           \
+                                                                                    \
+            for (int y = y0; y < y0 + 3; ++y)                                       \
+            {                                                                       \
+                for (int x = x0; x < x0 + 3; ++x)                                   \
+                {                                                                   \
+                    pixels[y][x] = 0xFF00FF00; /* GREEN */                          \
+                }                                                                   \
+            }                                                                       \
+        }                                                                           \
+    }                                                                               \
+                                                                                    \
+    sf::Texture tx;                                                                 \
+    tx.create(500, 500);                                                            \
+    tx.update((sf::Uint8 *) pixels, wnd_size, wnd_size, 0, 0);                      \
+                                                                                    \
+    sf::Sprite sprite(tx);                                                          \
+    sprite.setPosition(0, 0);                                                       \
+                                                                                    \
+    wnd.clear(sf::Color::Red);                                                      \
+    wnd.draw(sprite);                                                               \
+    wnd.display();
+
+
 /**
 *   @brief Manages of program executing by reading commands from "progress->execution.machine_code" and calling functions to execute them.
 *   @brief Prints messages about errors in stderr.
@@ -204,34 +247,50 @@ bool execution(cpu_store *progress)
 {
     assert(progress != nullptr);
 
-    progress->execution.machine_pos = sizeof(header);
-    while (progress->execution.machine_pos < progress->execution_size)
+    sf::RenderWindow wnd(sf::VideoMode(500, 500), "RAM");
+    bool is_hlt = false;
+
+    while (wnd.isOpen())
     {
-        unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
-
-        #define DEF_CMD(name, number, code)                                 \
-                case CMD_##name:                                            \
-                code                                                        \
-                break;
-
-        #define DEF_JMP_CMD(name, number, cmp)                              \
-                case CMD_##name:                                            \
-                {                                                           \
-                    GET_STK_TWO()                                           \
-                    if (approx_cmp(b, a, #cmp)) cmd_jmp(progress);          \
-                    else progress->execution.machine_pos += sizeof(int);    \
-                    break;                                                  \
-                }
-                
-        switch ((cmd & mask01))
+        sf::Event event;
+        while (wnd.pollEvent(event))
         {
-            #include "cmd.h"
-            default:
-                output_error(UNDEFINED_CMD);
-                return false;
+            if (event.type == sf::Event::Closed)
+            {
+                wnd.close();
+                break;
+            }
         }
-        #undef DEF_CMD
-        #undef DEF_JMP_CMD
+
+        progress->execution.machine_pos = sizeof(header);
+        while (progress->execution.machine_pos < progress->execution_size && is_hlt == false)
+        {
+            unsigned char cmd = *(unsigned char *) get_machine_cmd(progress, sizeof(char));
+
+            #define DEF_CMD(name, number, code)                                 \
+                    case CMD_##name:                                            \
+                        code                                                    \
+                        break;
+
+            #define DEF_JMP_CMD(name, number, cmp)                              \
+                    case CMD_##name:                                            \
+                    {                                                           \
+                        GET_STK_TWO()                                           \
+                        if (approx_cmp(b, a, #cmp)) cmd_jmp(progress);          \
+                        else progress->execution.machine_pos += sizeof(int);    \
+                        break;                                                  \
+                    }
+                
+            switch ((cmd & mask01))
+            {
+                #include "cmd.h"
+                default:
+                    output_error(UNDEFINED_CMD);
+                    return false;
+            }
+            #undef DEF_CMD
+            #undef DEF_JMP_CMD
+        }
     }
 
     return true;
