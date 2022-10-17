@@ -11,44 +11,11 @@
 
 #include "read_write.h"
 #include "stack.h"
-
-const   double DELTA = 0.000001;
-typedef double stack_el;
-
-const unsigned mask01 = 31;
-
-struct header
-{
-    char fst_let;
-    char sec_let;
-    char version;
-
-    size_t cmd_num;
-};
-
-struct machine
-{
-    void *machine_code;
-    int   machine_pos;
-};
+#include "machine.h"
 
 const int REG_NUM = 8;
 const int RAM_NUM = 10000;
 const int RAM_STR = 100;
-
-#define DEF_CMD(name, number, code)      \
-        CMD_##name = number,
-#define DEF_JMP_CMD(name, number, code)  \
-        CMD_##name = number,
-enum CMD
-{
-    #include "cmd.h"
-    CMD_NUM_ARG      = 1 << 5 ,
-    CMD_REG_ARG      = 1 << 6 ,
-    CMD_MEM_ARG      = 1 << 7 ,
-};
-#undef DEF_CMD
-#undef DEF_JMP_CMD
 
 struct cpu_store
 {
@@ -93,7 +60,7 @@ const char *error_messages[] =
 bool     check_signature  (cpu_store *progress);
 bool     execution        (cpu_store *progress);
 bool     approx_equal     (const double a,   const double b);
-bool     approx_cmp       (const stack_el a, const stack_el b, char *type);
+bool     approx_cmp       (const stack_el a, const stack_el b, const char *type);
 
 ERRORS   cmd_push         (cpu_store *progress);
 ERRORS   cmd_pop          (cpu_store *progress);
@@ -535,7 +502,7 @@ void output_error(ERRORS status)
 *   @return true if a <type> b and false else
 */
 
-bool approx_cmp(const stack_el a, const stack_el b, char *type)
+bool approx_cmp(const stack_el a, const stack_el b, const char *type)
 {
     assert (type != nullptr);
 
