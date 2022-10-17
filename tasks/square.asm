@@ -1,6 +1,6 @@
-push 1
-push -9.735
-push 23.6925562
+in
+in
+in
 pop rcx
 pop rbx
 pop rax

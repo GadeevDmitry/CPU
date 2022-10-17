@@ -410,7 +410,7 @@ long get_memory_val(cpu_store *const progress, const unsigned char cmd)
 
     long ram_index = 0;
     if (cmd & CMD_REG_ARG) ram_index += get_reg_val(progress, *(char *) get_machine_cmd(progress, sizeof(char)));
-    if (cmd & CMD_NUM_ARG) ram_index += *(long *) get_machine_cmd(progress, sizeof(long));
+    if (cmd & CMD_NUM_ARG) ram_index +=                       *(long *) get_machine_cmd(progress, sizeof(long));
 
     return ram_index;
 }
@@ -429,8 +429,8 @@ stack_el get_stack_el_val(cpu_store *progress, const unsigned char cmd)
     assert(progress != nullptr);
 
     stack_el val = 0;
-    if (cmd & CMD_REG_ARG) val += get_reg_val(progress, *(char *) get_machine_cmd(progress, sizeof(char)));
-    if (cmd & CMD_NUM_ARG) val += *(stack_el *) get_machine_cmd(progress, sizeof(stack_el));
+    if (cmd & CMD_REG_ARG) val += get_reg_val(progress, *(char *)     get_machine_cmd(progress, sizeof(char)));
+    if (cmd & CMD_NUM_ARG) val +=                       *(stack_el *) get_machine_cmd(progress, sizeof(stack_el));
 
     return val;
 }
@@ -449,7 +449,7 @@ stack_el get_reg_val(cpu_store *const progress, const char reg_num)
     assert(progress != nullptr);
 
     if (reg_num <= REG_NUM / 2) return progress->long_regs[reg_num];
-    return progress->regs[reg_num - 5];
+    else                        return progress->regs     [reg_num - 5];
 }
 
 /**
@@ -541,11 +541,11 @@ bool approx_cmp(const stack_el a, const stack_el b, char *type)
 
     bool is_equal = approx_equal(a, b);
 
-    if (!strcmp(type, ">")) return !is_equal && a > b;
-    if (!strcmp(type, ">=")) return is_equal || a > b;
-    if (!strcmp(type, "<")) return !is_equal && a < b;
-    if (!strcmp(type, "<=")) return is_equal || a < b;
-    if (!strcmp(type, "==")) return is_equal;
+    if (!strcmp(type, ">"))  return !is_equal && a > b;
+    if (!strcmp(type, ">=")) return  is_equal || a > b;
+    if (!strcmp(type, "<"))  return !is_equal && a < b;
+    if (!strcmp(type, "<=")) return  is_equal || a < b;
+    if (!strcmp(type, "==")) return  is_equal;
     if (!strcmp(type, "!=")) return !is_equal;
 
     return false;

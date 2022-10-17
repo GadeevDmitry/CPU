@@ -68,10 +68,12 @@ const int REG_NUM = 8;
 const char *reg_names[] = 
 {
     "empty",
+
     "rex"  ,
     "rfx"  ,
     "rgx"  ,
     "rhx"  ,
+
     "rax"  ,
     "rbx"  ,
     "rcx"  ,
@@ -150,7 +152,7 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label, const
     src_location info = {0, 1, (char *) calloc(sizeof(char), program->src_size + 1)};
     assert(info.cur_src_cmd != nullptr);
 
-    machine cpu = {calloc(sizeof(double), program->src_size), sizeof(header)};
+    machine cpu = { calloc(sizeof(double), program->src_size), sizeof(header) };
     assert( cpu.machine_code != nullptr);
 
     bool error = false;

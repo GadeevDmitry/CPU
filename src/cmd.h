@@ -35,6 +35,14 @@ DEF_CMD(DIV, 5,
     PUSH(b / a)
 })
 
+DEF_CMD(IN, 19, 
+{
+    stack_el a = 0;
+
+    scanf("%lg", &a);
+    PUSH(a);
+})
+
 DEF_CMD(OUT, 6,
 {
     GET_STK_ONE()

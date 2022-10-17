@@ -1,5 +1,5 @@
 push 1
-push 10
+push 6
 pop rbx
 pop rax
 
