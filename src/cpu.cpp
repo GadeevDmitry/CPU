@@ -229,7 +229,7 @@ int main(int argc, char *argv[])
     sf::Sprite sprite(tx);                                                          \
     sprite.setPosition(0, 0);                                                       \
                                                                                     \
-    wnd.clear(sf::Color::Red);                                                      \
+    wnd.clear(sf::Color::Black);                                                    \
     wnd.draw(sprite);                                                               \
     wnd.display();
 
