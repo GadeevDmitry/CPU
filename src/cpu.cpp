@@ -395,6 +395,15 @@ ERRORS cmd_pop(cpu_store *progress)
     return OK;
 }
 
+/**
+*   @brief Gets number which means the index of cell in ram_memory consisting of long-register or long-number.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*   @param cmd      [in] - coomand containing information about arguments
+*
+*   @return number which means the index of cell in ram_memory
+*/
+
 long get_memory_val(cpu_store *const progress, const unsigned char cmd)
 {
     assert(progress != nullptr);
@@ -405,6 +414,15 @@ long get_memory_val(cpu_store *const progress, const unsigned char cmd)
 
     return ram_index;
 }
+
+/**
+*   @brief Gets stack_el-value consisting of long-register or long-number.
+*
+*   @param progress [in] - "cpu_store" contains all information about program
+*   @param cmd      [in] - coomand containing information about arguments
+*
+*   @return stack_el-value
+*/
 
 stack_el get_stack_el_val(cpu_store *progress, const unsigned char cmd)
 {
@@ -506,6 +524,16 @@ void output_error(ERRORS status)
     }
     fprintf(stderr, RED "ERROR: " CANCEL "%s\n", error_messages[status]);
 }
+
+/**
+*   @brief Compares two double numbers using "approx_equal()".
+*
+*   @param a    [in] - first  number to compare
+*   @param b    [in] - second number to compare
+*   @param type [in] - pointer to the first byte of nukk-terminated byte string which means operator of comparing (">", "<", "==", "<="...)
+*
+*   @return true if a <type> b and false else
+*/
 
 bool approx_cmp(const stack_el a, const stack_el b, char *type)
 {
