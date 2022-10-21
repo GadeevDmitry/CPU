@@ -78,6 +78,8 @@ stack_el get_stack_el_val (cpu_store *progress, const unsigned char cmd);
 
 int main(int argc, char *argv[])
 {
+    fprintf(stderr, "\n");
+
     cpu_store progress = {};
     stack_ctor(&progress.stk  , sizeof(stack_el));
     stack_ctor(&progress.calls, sizeof(int));
@@ -460,18 +462,18 @@ bool check_signature(cpu_store *progress)
     //------------
     if (signature.fst_let != 'G' || signature.sec_let != 'D')
     {
-        fprintf(stderr, "./CPU: Signature check falls\n");
+        fprintf(stderr, RED "ERROR: " CANCEL "./CPU: Signature check falls\n");
         return false;
     }
     if ((progress->version = signature.version) == 0)
     {
-        fprintf(stderr, "./CPU doesn't support the version 0\n"
+        fprintf(stderr, RED "ERROR: " CANCEL "./CPU doesn't support the version 0\n"
                         "Maybe it means that the source file has any errors\n");
         return false;
     }
     if ((progress->version = signature.version) < 1 || progress->version > 2)
     {
-        fprintf(stderr, "./CPU doesn't support the version %d\n", signature.version);
+        fprintf(stderr, RED "ERROR: " CANCEL "./CPU doesn't support the version %d\n", signature.version);
         return false;
     }
 
