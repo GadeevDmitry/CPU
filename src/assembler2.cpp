@@ -53,25 +53,26 @@ const char *reg_names[] =
 
 /*-----------------------------------------FUNCTION_DECLARATION-----------------------------------------*/
 
-CMD   identify_cmd         (const char *cmd);
+CMD   identify_cmd          (const char *cmd);
 
-bool  read_push_pop_arg    (source *const program, src_location *const info, machine *const cpu, unsigned char cmd);
-bool  cmd_pop              (source *const program, src_location *const info, machine *const cpu);
-bool  cmd_jmp              (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode, unsigned char cmd);
-bool  get_mark             (source *const program, src_location *const info, machine *const cpu, tag *const label, int possible_mrk_beg, const char mark_mode);
-bool  is_double            (const char *s, double *const val);
-bool  is_long              (const char *s, long   *const val);
-bool  is_reg               (const char *s, char   *const pos);
-bool  is_long_reg          (const char *s, char   *const pos);
+bool  read_push_pop_arg     (source *const program, src_location *const info, machine *const cpu, unsigned char cmd);
+bool  cmd_pop               (source *const program, src_location *const info, machine *const cpu);
+bool  cmd_jmp               (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode, unsigned char cmd);
+bool  get_mark              (source *const program, src_location *const info, machine *const cpu, tag *const label, int possible_mrk_beg, const char mark_mode);
+bool  is_comment            (source *const program, src_location *const info);
+bool  is_double             (const char *s, double *const val);
+bool  is_long               (const char *s, long   *const val);
+bool  is_reg                (const char *s, char   *const pos);
+bool  is_long_reg           (const char *s, char   *const pos);
 
-int   read_val             (source *program, src_location *info, const char sep1, const char sep2 = ' ');
+int   read_val              (source *program, src_location *info, const char sep1, const char sep2 = ' ');
 
-void  tag_ctor             (tag *const label);
-void  add_machine_cmd      (machine *const cpu, const size_t val_size, void *val_ptr);
-void  skip_spaces          (source *const program, src_location *const info);
-void *assembler            (source *program, size_t *const cpu_size, tag *const label, const char mark_mode);
-void *make_wrong_signature ();
-void write_wrong_signature (const char *output_file);
+void  tag_ctor              (tag *const label);
+void  add_machine_cmd       (machine *const cpu, const size_t val_size, void *val_ptr);
+void  skip_spaces           (source *const program, src_location *const info);
+void *assembler             (source *program, size_t *const cpu_size, tag *const label, const char mark_mode);
+void *make_wrong_signature  ();
+void  write_wrong_signature (const char *output_file);
 
 /*------------------------------------------------------------------------------------------------------*/
 
@@ -151,7 +152,10 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label, const
         switch (status_cmd)
         {
             case CMD_NOT_EXICTING:
-                if (!get_mark(program, &info, &cpu, label, possible_mark_begin, mark_mode)) error = true;
+                if (is_comment(program, &info))                                              break;
+                if (get_mark  (program, &info, &cpu, label, possible_mark_begin, mark_mode)) break;
+                
+                error = true;
                 break;
 
             case CMD_PUSH:
@@ -531,6 +535,22 @@ bool cmd_jmp(source *const program, src_location *const info, machine *const cpu
     }
 
     fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a mark\n", info->cur_src_line, info->cur_src_cmd);
+    return false;
+}
+
+bool is_comment(source *const program, src_location *const info)
+{
+    assert(program != nullptr);
+    assert(info    != nullptr);
+
+    if (info->cur_src_cmd[0] == '#')
+    {
+        while (info->cur_src_pos <  program->src_size && program->src_code[info->cur_src_pos] != '\n') ++info->cur_src_pos;
+        if    (info->cur_src_pos != program->src_size) ++info->cur_src_pos;
+
+        return true;
+    }
+
     return false;
 }
 
