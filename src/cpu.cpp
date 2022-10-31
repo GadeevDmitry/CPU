@@ -13,11 +13,11 @@
 #include "stack.h"
 #include "machine.h"
 
-const int REG_NUM =          8;
-const int WIDTH   =       1280;
-const int HEIGHT  =        720;
-const int RAM_NUM = 1280 * 720;
-const int RAM_STR =        100;
+const int REG_NUM =       8;
+const int WIDTH   =     960;
+const int HEIGHT  =     720;
+const int RAM_NUM = 960*720;
+const int RAM_STR =     100;
 
 struct cpu_store
 {
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
         POP()
 
 #define PRINT(val)                                                                  \
-        printf("%llu\n", val);
+        printf("%u\n", val);
 
 #define ADD_POINT()                                                                 \
         int tmp_ret_val = progress->execution.machine_pos + sizeof(int);            \
@@ -188,8 +188,9 @@ bool execution(cpu_store *progress)
 {
     assert(progress != nullptr);
 
-    sf::RenderWindow wnd(sf::VideoMode(1280, 720), "RAM");
-    wnd.setFramerateLimit(30);;
+    sf::RenderWindow wnd(sf::VideoMode(WIDTH, HEIGHT), "RAM");
+    wnd.setFramerateLimit(30);
+
     bool is_hlt = false;
 
     while (wnd.isOpen())
