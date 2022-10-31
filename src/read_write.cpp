@@ -7,15 +7,6 @@
 
 #include "read_write.h"
 
-/**
-*   @brief Writes machine code from "data" into the "machine.cpu".
-*
-*   @param data      [in] - pointer to the first element of array with machine code.
-*   @param data_size [in] - size (in bytes) of "data"
-*
-*   @return nothing 
-*/
-
 bool write_file(const char *file_name, void *data, const int data_size)
 {
     FILE  *stream = fopen(file_name, "wb");

@@ -39,7 +39,7 @@ DEF_CMD(IN, 19,
 {
     stack_el a = 0;
 
-    scanf("%lg", &a);
+    scanf("%llu", &a);
     PUSH(a);
 })
 
@@ -64,7 +64,6 @@ DEF_CMD(POP, 8,
         output_error(status);
         return false;
     }
-    DRAW_RAM();
 })
 
 DEF_CMD(CALL, 9,
@@ -91,6 +90,11 @@ DEF_CMD(SQRT, 12,
     NEG_CHECK(a)
     a = sqrt(a);
     PUSH(a)
+})
+
+DEF_CMD(DRAW, 20,
+{
+    cmd_draw(&wnd, progress);
 })
 
 DEF_JMP_CMD(JA , 13, >)

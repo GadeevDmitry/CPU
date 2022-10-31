@@ -13,9 +13,11 @@
 #include "stack.h"
 #include "machine.h"
 
-const int REG_NUM = 8;
-const int RAM_NUM = 10000;
-const int RAM_STR = 100;
+const int REG_NUM =          8;
+const int WIDTH   =       1280;
+const int HEIGHT  =        720;
+const int RAM_NUM = 1280 * 720;
+const int RAM_STR =        100;
 
 struct cpu_store
 {
@@ -70,6 +72,7 @@ long     get_memory_val   (cpu_store *const progress, const unsigned char cmd);
 
 void    *get_machine_cmd  (cpu_store *const progress, const size_t val_size);
 void     output_error     (ERRORS status);
+void     cmd_draw         (sf::RenderWindow *wnd, cpu_store *progress);
 
 stack_el get_reg_val      (cpu_store *const progress, const char reg_num);
 stack_el get_stack_el_val (cpu_store *progress, const unsigned char cmd);
@@ -141,7 +144,7 @@ int main(int argc, char *argv[])
         POP()
 
 #define PRINT(val)                                                                  \
-        printf("%lg\n", val);
+        printf("%llu\n", val);
 
 #define ADD_POINT()                                                                 \
         int tmp_ret_val = progress->execution.machine_pos + sizeof(int);            \
@@ -162,46 +165,15 @@ int main(int argc, char *argv[])
             return false;                                                           \
         }
 
-#define DRAW_RAM()                                                                  \
-                                                                                    \
-    /* for (int i = 0; i <= 10; ++i)                                                \
-    {                                                                               \
-        fprintf(stderr, "%lg ", progress->ram[i]);                                  \
-    }                                                                               \
-    fprintf(stderr, "\n");*/                                                        \
-                                                                                    \
-    const int  wnd_size = 500;                                                      \
-    const int cell_size = 5;                                                        \
-    sf::Uint32 pixels[wnd_size][wnd_size] = {};                                     \
-                                                                                    \
-    for (int RAM_cnt = 0; RAM_cnt < RAM_NUM; ++RAM_cnt)                             \
-    {                                                                               \
-        if (!approx_equal(progress->ram[RAM_cnt], 0))                               \
+#define check_event()                                                               \
+        while (wnd.pollEvent(event))                                                \
         {                                                                           \
-            int y0 = cell_size * (RAM_cnt / RAM_STR) + 1;                           \
-            int x0 = cell_size * (RAM_cnt % RAM_STR) + 1;                           \
-                                                                                    \
-            for (int y = y0; y < y0 + 3; ++y)                                       \
+            if (event.type == sf::Event::Closed)                                    \
             {                                                                       \
-                for (int x = x0; x < x0 + 3; ++x)                                   \
-                {                                                                   \
-                    pixels[y][x] = 0xFF00FF00; /* GREEN */                          \
-                }                                                                   \
+                wnd.close();                                                        \
+                break;                                                              \
             }                                                                       \
-        }                                                                           \
-    }                                                                               \
-                                                                                    \
-    sf::Texture tx;                                                                 \
-    tx.create(500, 500);                                                            \
-    tx.update((sf::Uint8 *) pixels, wnd_size, wnd_size, 0, 0);                      \
-                                                                                    \
-    sf::Sprite sprite(tx);                                                          \
-    sprite.setPosition(0, 0);                                                       \
-                                                                                    \
-    wnd.clear(sf::Color::Black);                                                    \
-    wnd.draw(sprite);                                                               \
-    wnd.display();
-
+        }
 
 /**
 *   @brief Manages of program executing by reading commands from "progress->execution.machine_code" and calling functions to execute them.
@@ -216,20 +188,14 @@ bool execution(cpu_store *progress)
 {
     assert(progress != nullptr);
 
-    sf::RenderWindow wnd(sf::VideoMode(500, 500), "RAM");
+    sf::RenderWindow wnd(sf::VideoMode(1280, 720), "RAM");
+    wnd.setFramerateLimit(30);;
     bool is_hlt = false;
 
     while (wnd.isOpen())
     {
         sf::Event event;
-        while (wnd.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-            {
-                wnd.close();
-                break;
-            }
-        }
+        check_event();
 
         progress->execution.machine_pos = sizeof(header);
         while (progress->execution.machine_pos < progress->execution_size && is_hlt == false)
@@ -259,6 +225,8 @@ bool execution(cpu_store *progress)
             }
             #undef DEF_CMD
             #undef DEF_JMP_CMD
+
+            check_event();
         }
     }
 
@@ -282,6 +250,20 @@ void *get_machine_cmd(cpu_store *const progress, const size_t val_size)
     progress->execution.machine_pos += val_size;
 
     return cmd;
+}
+
+void cmd_draw(sf::RenderWindow *wnd, cpu_store *progress)
+{
+    sf::Texture tx;
+    tx.create(WIDTH, HEIGHT);
+    tx.update((sf::Uint8 *) progress->ram, WIDTH, HEIGHT, 0, 0);
+
+    sf::Sprite sprite(tx);
+    sprite.setPosition(0, 0);
+
+    //wnd.clear(sf::Color::Black);
+    (*wnd).draw(sprite);
+    (*wnd).display();
 }
 
 /**
