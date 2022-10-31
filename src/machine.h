@@ -2,7 +2,7 @@
 #define MACHINE_H
 
 const   double DELTA = 0.000001;
-typedef unsigned int stack_el;
+typedef unsigned long long stack_el;
 
 const unsigned mask01 = 31;
 

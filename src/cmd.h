@@ -39,7 +39,7 @@ DEF_CMD(IN, 19,
 {
     stack_el a = 0;
 
-    scanf("%u", &a);
+    scanf("%llu", &a);
     PUSH(a);
 })
 

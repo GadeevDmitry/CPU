@@ -67,12 +67,12 @@ bool     approx_cmp       (const stack_el a, const stack_el b, const char *type)
 ERRORS   cmd_push         (cpu_store *progress);
 ERRORS   cmd_pop          (cpu_store *progress);
 ERRORS   cmd_jmp          (cpu_store *progress);
+void     cmd_draw         (sf::RenderWindow *wnd, cpu_store *progress);
 
 long     get_memory_val   (cpu_store *const progress, const unsigned char cmd);
 
 void    *get_machine_cmd  (cpu_store *const progress, const size_t val_size);
 void     output_error     (ERRORS status);
-void     cmd_draw         (sf::RenderWindow *wnd, cpu_store *progress);
 
 stack_el get_reg_val      (cpu_store *const progress, const char reg_num);
 stack_el get_stack_el_val (cpu_store *progress, const unsigned char cmd);
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
         POP()
 
 #define PRINT(val)                                                                  \
-        printf("%u\n", val);
+        printf("%llu\n", val);
 
 #define ADD_POINT()                                                                 \
         int tmp_ret_val = progress->execution.machine_pos + sizeof(int);            \
@@ -186,10 +186,14 @@ int main(int argc, char *argv[])
 
 bool execution(cpu_store *progress)
 {
+    //<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+    // fprintf(stderr, "progress_size = %ld\n", progress->execution_size);
+    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
     assert(progress != nullptr);
 
     sf::RenderWindow wnd(sf::VideoMode(WIDTH, HEIGHT), "RAM");
-    wnd.setFramerateLimit(30);
+    wnd.setFramerateLimit(60);
 
     bool is_hlt = false;
 
@@ -228,6 +232,9 @@ bool execution(cpu_store *progress)
             #undef DEF_JMP_CMD
 
             check_event();
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+            // fprintf(stderr, "is_hlt = %d\n", is_hlt);
+            //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         }
     }
 
@@ -255,9 +262,15 @@ void *get_machine_cmd(cpu_store *const progress, const size_t val_size)
 
 void cmd_draw(sf::RenderWindow *wnd, cpu_store *progress)
 {
+    fprintf(stderr, "DRAW\n");
+
+    unsigned int int_ram[WIDTH*HEIGHT] = {};
+
+    for (int cnt = 0; cnt < WIDTH * HEIGHT; ++cnt) int_ram[cnt] = (unsigned int) progress->ram[cnt];
+
     sf::Texture tx;
     tx.create(WIDTH, HEIGHT);
-    tx.update((sf::Uint8 *) progress->ram, WIDTH, HEIGHT, 0, 0);
+    tx.update((sf::Uint8 *) int_ram, WIDTH, HEIGHT, 0, 0);
 
     sf::Sprite sprite(tx);
     sprite.setPosition(0, 0);
