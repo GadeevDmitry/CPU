@@ -186,10 +186,6 @@ int main(int argc, char *argv[])
 
 bool execution(cpu_store *progress)
 {
-    //<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-    // fprintf(stderr, "progress_size = %ld\n", progress->execution_size);
-    //>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
     assert(progress != nullptr);
 
     sf::RenderWindow wnd(sf::VideoMode(WIDTH, HEIGHT), "RAM");

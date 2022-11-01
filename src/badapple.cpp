@@ -9,7 +9,8 @@ const int FILE_NAME_LEN   = 100;
 const int WIDTH           = 960;
 const int HEIGHT          = 720;
 
-void get_filename(int img_cnt, char *const filename);
+void draw           (sf::RenderWindow *wnd, const sf::Uint8 *code);
+void get_filename   (int img_cnt,           char *const filename );
 
 int main()
 {
@@ -21,7 +22,22 @@ int main()
 
     while (wnd.isOpen())
     {
-        for (int cnt = 1; cnt < NUMBER_OF_FILES; ++cnt)
+        const sf::Uint8 *pixel_const = nullptr;
+
+        unsigned int pixel_first [WIDTH*HEIGHT] = {};
+
+        char filename[FILE_NAME_LEN] = "";
+        get_filename(1, filename);
+
+        sf::Image frame;
+        frame.loadFromFile(filename);
+        pixel_const = frame.getPixelsPtr();
+
+        for (int i = 0; i < WIDTH*HEIGHT; ++i) pixel_first[i] = *(unsigned int *) ((char *)pixel_const + 4 * i);
+
+        draw(&wnd, pixel_const);
+
+        for (int cnt = 2; cnt < NUMBER_OF_FILES; ++cnt)
         {
             sf::Event event;
 
@@ -34,36 +50,33 @@ int main()
                 }
             }
 
-            char filename[FILE_NAME_LEN] = "";
             get_filename(cnt, filename);
 
-            unsigned int       code_int [WIDTH*HEIGHT] = {};
-            unsigned long long code_long[WIDTH*HEIGHT] = {};
-
-            sf::Image frame ;
-            const sf::Uint8 *pixel;
-
             frame.loadFromFile(filename);
-            pixel = frame.getPixelsPtr();
+            pixel_const = frame.getPixelsPtr();
 
             for (int i = 0; i < WIDTH*HEIGHT; ++i)
             {
-                code_int [i] = *(unsigned int     *) ((char *) pixel + 4*i);
-                code_long[i] =  (unsigned long long) code_int[i];
-                code_int [i] =  (unsigned int)      code_long[i];
+                if (pixel_first[i] == *(unsigned int *) ((char *)pixel_const + 4 * i)) continue;
+                pixel_first[i] = *(unsigned int *) ((char *)pixel_const + 4 * i);
             }
 
-            sf::Texture tx;
-            tx.create(WIDTH, HEIGHT);
-            tx.update((sf::Uint8 *)code_int, WIDTH, HEIGHT, 0, 0);
-
-            sf::Sprite sprite(tx);
-            sprite.setPosition(0, 0);
-
-            wnd.draw(sprite);
-            wnd.display();
+            draw(&wnd, (sf::Uint8 *)pixel_first);
         }
     }
+}
+
+void draw(sf::RenderWindow *wnd, const sf::Uint8 *code)
+{
+    sf::Texture tx;
+    tx.create(WIDTH, HEIGHT);
+    tx.update(code, WIDTH, HEIGHT, 0, 0);
+
+    sf::Sprite sprite(tx);
+    sprite.setPosition(0, 0);
+
+    (*wnd).draw(sprite);
+    (*wnd).display();
 }
 
 void get_filename(int img_cnt, char *const filename)

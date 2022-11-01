@@ -418,9 +418,9 @@ bool read_push_pop_arg(source *const program, src_location *const info, machine 
 
     read_val(program, info, '+', ']');
 
-    double dbl_arg = 0;
-    char   reg_arg = 0;
-    if (is_double(info->cur_src_cmd, &dbl_arg))
+    long lng_arg = 0;
+    char reg_arg = 0;
+    if (is_long(info->cur_src_cmd, &lng_arg))
     {
         cmd = cmd | CMD_NUM_ARG;
         skip_spaces(program, info);
@@ -436,7 +436,7 @@ bool read_push_pop_arg(source *const program, src_location *const info, machine 
 
                 add_machine_cmd(cpu, sizeof(char)  , &cmd);
                 add_machine_cmd(cpu, sizeof(char)  , &reg_arg);
-                add_machine_cmd(cpu, sizeof(double), &dbl_arg);
+                add_machine_cmd(cpu, sizeof(double), &lng_arg);
 
                 return true;
             }
@@ -445,15 +445,15 @@ bool read_push_pop_arg(source *const program, src_location *const info, machine 
                 fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a register name\n", info->cur_src_line, info->cur_src_cmd);
                 return false;
             }
-        } //if only double arg
+        } //if only long arg
         else
         {
             add_machine_cmd(cpu, sizeof(char)  , &cmd);
-            add_machine_cmd(cpu, sizeof(double), &dbl_arg);
+            add_machine_cmd(cpu, sizeof(double), &lng_arg);
 
             return true;
         }
-    } //if first argument is not "double"
+    } //if first argument is not "long"
     else if (is_reg(info->cur_src_cmd, &reg_arg) || is_long_reg(info->cur_src_cmd, &reg_arg))
     {
         cmd = cmd | CMD_REG_ARG;
@@ -464,13 +464,13 @@ bool read_push_pop_arg(source *const program, src_location *const info, machine 
             ++info->cur_src_pos;
             read_val(program, info, ']');
 
-            if (is_double(info->cur_src_cmd, &dbl_arg))
+            if (is_long(info->cur_src_cmd, &lng_arg))
             {
                 cmd = cmd | CMD_NUM_ARG;
 
                 add_machine_cmd(cpu, sizeof(char)  , &cmd);
                 add_machine_cmd(cpu, sizeof(char)  , &reg_arg);
-                add_machine_cmd(cpu, sizeof(double), &dbl_arg);
+                add_machine_cmd(cpu, sizeof(double), &lng_arg);
 
                 return true;
             }

@@ -12,6 +12,6 @@ all:
 #	g++ ../object/make2.o  -o  ../EXE/make2
 #	g++ ../object/assembler.o  ../object/read_write.o -o ../EXE/Asm
 #	g++ cpu.cpp        read_write.cpp stack.cpp -o ../EXE/CPU -lsfml-graphics -lsfml-window -lsfml-system
-	g++ generate.cpp                                          -lsfml-graphics -lsfml-window -lsfml-system
-#	g++ badapple.cpp									      -lsfml-graphics -lsfml-window -lsfml-system
+#	g++ generate.cpp                                          -lsfml-graphics -lsfml-window -lsfml-system
+	g++ badapple.cpp									      -lsfml-graphics -lsfml-window -lsfml-system
 #	g++ assembler2.cpp read_write.cpp tag.cpp   -o ../EXE/Asm2
