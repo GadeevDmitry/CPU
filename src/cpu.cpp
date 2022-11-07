@@ -67,6 +67,9 @@ bool     approx_cmp       (const stack_el a, const stack_el b, const char *type)
 ERRORS   cmd_push         (cpu_store *progress);
 ERRORS   cmd_pop          (cpu_store *progress);
 ERRORS   cmd_jmp          (cpu_store *progress);
+ERRORS   cmd_push_many    (cpu_store *progress);
+ERRORS   cmd_pop_many     (cpu_store *progress);
+
 void     cmd_draw         (sf::RenderWindow *wnd, cpu_store *progress);
 
 long     get_memory_val   (cpu_store *const progress, const unsigned char cmd);
@@ -351,6 +354,39 @@ ERRORS cmd_pop(cpu_store *progress)
     }
     if (cmd & CMD_NUM_ARG)
     {
+        stack_pop(&progress->stk);
+    }
+    return OK;
+}
+
+ERRORS cmd_push_many(cpu_store *progress)
+{
+    assert(progress != nullptr);
+
+    long number = *(long *) get_machine_cmd(progress, sizeof(long));
+
+    while (number--)
+    {
+        stack_el val = *(stack_el *) get_machine_cmd(progress, sizeof(stack_el));
+        stack_push(&progress->stk, &val);
+    }
+
+    return OK;
+}
+
+ERRORS cmd_pop_many(cpu_store *progress)
+{
+    assert(progress != nullptr);
+
+    long number = *(long *) get_machine_cmd(progress, sizeof(long));
+
+    while (number--)
+    {
+        long ram_index = *(long *) get_machine_cmd(progress, sizeof(long));
+        
+        if (stack_empty(&progress->stk)) return EMPTY_STACK;
+
+        progress->ram[ram_index] = *(stack_el *) stack_front(&progress->stk);
         stack_pop(&progress->stk);
     }
     return OK;

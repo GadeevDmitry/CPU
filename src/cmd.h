@@ -97,6 +97,16 @@ DEF_CMD(DRAW, 20,
     cmd_draw(&wnd, progress);
 })
 
+DEF_CMD(PUSH_MANY, 21, 
+{
+    cmd_push_many(progress);
+})
+
+DEF_CMD(POP_MANY, 22,
+{
+    cmd_pop_many(progress);
+})
+
 DEF_JMP_CMD(JA , 13, >)
 DEF_JMP_CMD(JAE, 14, >=)
 DEF_JMP_CMD(JB , 15, <)

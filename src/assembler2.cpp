@@ -59,6 +59,9 @@ bool  read_push_pop_arg     (source *const program, src_location *const info, ma
 bool  cmd_pop               (source *const program, src_location *const info, machine *const cpu);
 bool  cmd_jmp               (source *const program, src_location *const info, machine *const cpu, tag *const label, const char mark_mode, unsigned char cmd);
 bool  get_mark              (source *const program, src_location *const info, machine *const cpu, tag *const label, int possible_mrk_beg, const char mark_mode);
+bool push_many              (source *const program, src_location *const info, machine *const cpu, unsigned char cmd);
+bool pop_many               (source *const program, src_location *const info, machine *const cpu, unsigned char cmd);
+
 bool  is_comment            (source *const program, src_location *const info);
 bool  is_double             (const char *s, double *const val);
 bool  is_long               (const char *s, long   *const val);
@@ -169,6 +172,14 @@ void *assembler(source *program, size_t *const cpu_size, tag *const label, const
             case CMD_JMP: case CMD_JA: case CMD_JAE: case CMD_JB:
             case CMD_JBE: case CMD_JE: case CMD_JNE: case CMD_CALL:
                 if (!cmd_jmp(program, &info, &cpu, label, mark_mode, status_cmd)) error = true;
+                break;
+
+            case CMD_PUSH_MANY:
+                if (!push_many(program, &info, &cpu, status_cmd)) error = true;
+                break;
+
+            case CMD_POP_MANY:
+                if (!pop_many(program, &info, &cpu,  status_cmd)) error = true;
                 break;
 
             default:
@@ -290,6 +301,78 @@ bool cmd_pop(source *const program, src_location *const info, machine *const cpu
 
     fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid pop-argument\n", info->cur_src_line, info->cur_src_cmd);
     return false;
+}
+
+bool push_many(source *const program, src_location *const info, machine *const cpu, unsigned char cmd)
+{
+    assert(program != nullptr);
+    assert(info    != nullptr);
+    assert(cpu     != nullptr);
+
+    add_machine_cmd(cpu, sizeof(char), &cmd);
+
+    long number = 0;
+    read_val(program, info, ' ', ' ');
+    
+    if (is_long(info->cur_src_cmd, &number))
+    {
+        add_machine_cmd(cpu, sizeof(long), &number);
+        while (number--)
+        {
+            long val = 0;
+            read_val(program, info, ' ', ' ');
+
+            if (is_long(info->cur_src_cmd, &val)) add_machine_cmd(cpu, sizeof(long), &val);
+            else
+            {
+                fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid long-argument\n", info->cur_src_line, info->cur_src_cmd);
+                return false;
+            }
+        }
+    }
+    else
+    {
+        fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid number of push-arguments\n", info->cur_src_line, info->cur_src_cmd);
+        return false;
+    }
+
+    return true;
+}
+
+bool pop_many(source *const program, src_location *const info, machine *const cpu, unsigned char cmd)
+{
+    assert(program != nullptr);
+    assert(info    != nullptr);
+    assert(cpu      != nullptr);
+
+    add_machine_cmd(cpu, sizeof(char), &cmd);
+    
+    long number = 0;
+    read_val(program, info, ' ', ' ');
+
+    if (is_long(info->cur_src_cmd, &number))
+    {
+        add_machine_cmd(cpu, sizeof(long), &number);
+        while (number--)
+        {
+            long ram_index = 0;
+            read_val(program, info, ' ', ' ');
+
+            if (is_long(info->cur_src_cmd, &ram_index)) add_machine_cmd(cpu, sizeof(long), &ram_index);
+            else
+            {
+                fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid long-argument\n", info->cur_src_line, info->cur_src_cmd);
+                return false;
+            }
+        }
+    }
+    else
+    {
+        fprintf(stderr, "line %4d: " RED "ERROR: " CANCEL "\"%s\" is not a valid number of pop-arguments\n", info->cur_src_line, info->cur_src_cmd);
+        return false;
+    }
+
+    return true;
 }
 
 #define MEM_SYNTAX_CHECK                                                                                                        \

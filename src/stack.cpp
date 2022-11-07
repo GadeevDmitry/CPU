@@ -31,11 +31,13 @@ void *stack_pop(stack *const stk)
 {
     assert(stk != nullptr);
 
+    void *ret = (char *) stk->data + (stk->size - 1) * stk->el_size;
+
     stack_realloc(stk);
     --stk->size;
     stack_realloc(stk);
 
-    return (char *) stk->data + stk->size * stk->el_size;
+    return ret;
 }
 
 void *stack_front(stack *const stk)
