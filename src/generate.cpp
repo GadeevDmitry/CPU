@@ -4,7 +4,7 @@
 #include <string.h>
 #include <SFML/Graphics.hpp>
 
-const int NUMBER_OF_FILES = 1000;
+const int NUMBER_OF_FILES = 6572;
 const int FILE_NAME_LEN   = 100;
 const int WIDTH           = 960;
 const int HEIGHT          = 720;

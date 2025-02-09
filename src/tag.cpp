@@ -31,9 +31,10 @@ int tag_string_find(tag *const label, const char *s)
     assert(label != nullptr);
     assert(s     != nullptr);
 
+    int len = strlen(s);
+    
     for (int i = 0; i < label->size; ++i)
     {
-        int len = strlen(s);
         if (len == label->data[i].mark_size && !strncmp(s, label->data[i].mark_ptr, len)) return i;
     }
     return -1;
